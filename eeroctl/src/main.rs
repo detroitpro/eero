@@ -803,8 +803,8 @@ async fn main() -> Result<()> {
                 SpeedTestCmd::Run { network } => {
                     let network_id =
                         resolve_network_id_or_default(&client, network.as_deref()).await?;
-                    let result = client.run_speed_test(network_id).await?;
-                    out.print(&result)?;
+                    client.run_speed_test(network_id).await?;
+                    eprintln!("Speed test started. Please run `speed-test get` in a moment.");
                 }
                 SpeedTestCmd::Get { network } => {
                     let network_id =

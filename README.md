@@ -103,11 +103,243 @@ eeroctl device list
 # Get details for a specific device
 eeroctl device get "MacBook Pro"
 
-# Run a speed test
+# Run a speed test, then fetch the results
 eeroctl network speed-test run
+eeroctl network speed-test get
 
 # Check eero node status
 eeroctl eero list
+```
+
+## Example Output
+
+All output is YAML by default (with syntax highlighting in a terminal). Use `--json` for JSON or `--jq` for filtered output.
+
+### account get
+
+```
+$ eeroctl account get
+networks:
+  count: 1
+  data:
+  - url: /2.2/networks/12345
+    name: MyNetwork
+premium_status: active
+is_premium: true
+role: owner
+```
+
+### network get
+
+```
+$ eeroctl network get
+name: MyNetwork
+health:
+  internet:
+    status: connected
+  eero_network:
+    status: connected
+speed:
+  down:
+    value: 500.0
+    units: Mbps
+  up:
+    value: 50.0
+    units: Mbps
+clients:
+  count: 10
+eeros:
+  count: 3
+dns:
+  provider: cloudflare
+  caching: true
+sqm: true
+band_steering: true
+upnp: true
+ipv6: true
+wpa3: true
+target_firmware: 7.0.0
+```
+
+### device list
+
+```
+$ eeroctl device list
+ID           NAME
+2001         MacBook Pro
+2002         galaxy-phone
+2003         Living Room TV
+```
+
+### device get
+
+```
+$ eeroctl device get "MacBook Pro"
+mac: 11:22:33:44:55:66
+manufacturer: Apple
+ip: 192.168.4.100
+connected: true
+wireless: true
+connection_type: wireless
+source:
+  location: Living Room
+profile:
+  name: Default
+paused: false
+blocked: false
+frequency: 5 GHz
+auth: wpa3
+```
+
+### eero list
+
+```
+$ eeroctl eero list
+- model: eero Pro 6E
+  location: Living Room
+  status: green
+  connected_clients_count: 5
+  gateway: true
+  ip_address: 192.168.4.1
+  mesh_quality_bars: 5
+  wired: true
+- model: eero 6+
+  location: Bedroom
+  status: green
+  connected_clients_count: 3
+  gateway: false
+  ip_address: 192.168.4.2
+  mesh_quality_bars: 4
+  wired: false
+```
+
+### eero get
+
+```
+$ eeroctl eero get "Living Room"
+model: eero Pro 6E
+location: Living Room
+os_version: 7.0.0-123
+status: green
+status_light:
+  enabled: true
+  brightness: 100
+connected_clients_count: 5
+nightlight:
+  enabled: false
+  schedule:
+    'on': '21:00'
+    'off': '07:00'
+  brightness: 50
+gateway: true
+ip_address: 192.168.4.1
+mesh_quality_bars: 5
+wired: true
+update_available: false
+```
+
+### speed-test run / get
+
+```
+$ eeroctl network speed-test run
+Speed test started. Please run `speed-test get` in a moment.
+
+$ eeroctl network speed-test get
+- date: '2024-06-15T12:00:00Z'
+  up_mbps: 48.5
+  down_mbps: 495.2
+```
+
+### profile list / get
+
+```
+$ eeroctl profile list
+- name: Default
+  paused: false
+- name: Kids
+  paused: false
+
+$ eeroctl profile get "Kids"
+name: Kids
+paused: false
+blocked_applications:
+- tiktok
+dns_policies:
+  block:
+  - adult
+  safe_search_enabled: true
+  youtube_restricted: true
+schedule:
+  enabled: true
+  time_ranges: []
+```
+
+### forward list
+
+```
+$ eeroctl forward list
+- enabled: true
+  ip_address: 192.168.4.100
+  port: '8080'
+  external_port: '80'
+  protocol: tcp
+  display_name: Web Server
+```
+
+### guest get
+
+```
+$ eeroctl network guest get
+name: MyNetwork Guest
+password: guestpass
+enabled: true
+```
+
+### activity get
+
+```
+$ eeroctl activity get
+insights:
+- type: top_domain
+  category: streaming
+  count: 1500
+  domain: netflix.com
+- type: top_domain
+  category: social
+  count: 800
+  domain: twitter.com
+counts:
+  blocked: 42
+  allowed: 15000
+  inspected: 15042
+```
+
+### diagnostics get
+
+```
+$ eeroctl diagnostics get
+status: completed
+results:
+- type: internet
+  status: pass
+  details:
+    latency_ms: 12
+- type: dns
+  status: pass
+  details:
+    resolver: 1.1.1.1
+```
+
+### jq filter
+
+```
+$ eeroctl --jq '.name' network get
+"MyNetwork"
+
+$ eeroctl --jq '.[].display_name' device list -m
+"MacBook Pro"
+"galaxy-phone"
+"Living Room TV"
 ```
 
 ## Network Resolution
