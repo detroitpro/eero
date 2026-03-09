@@ -10,7 +10,7 @@ keywords = ["eero", "wifi", "router", "cli"]
 categories = ["command-line-utilities", "network-programming"]
 
 [dependencies]
-eero-api = { path = "../eero-api" }
+eero-api = { version = "0.1.0", path = "../eero-api" }
 tokio = { version = "1", features = ["full"] }
 clap = { version = "4", features = ["derive", "env"] }
 serde = { version = "1", features = ["derive"] }
