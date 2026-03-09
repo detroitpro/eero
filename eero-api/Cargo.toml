@@ -1,7 +1,7 @@
 [package]
 name = "eero-api"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "Async Rust client library for the eero WiFi router API"
 license = "MIT"
 repository = "https://github.com/erikh/eeroctl"
