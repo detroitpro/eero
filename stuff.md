@@ -1,0 +1,5 @@
+- please fetch the account information on each api request that requires a network id. if the network id is omitted, please take the first network entry.
+- please replace all update commands with "set" commands that allow multiple key/value pairs that construct and send the update operation as one unit. the first argument should be the id of the object being manipulated, such as network, eero, diagnostics device etc. Please use the appropriate name as the default way to look up ids, or id:XXXXX syntax where the id is the semantic id (normally the last component of the object's identity url)
+- the eero get command should automatically know the url unless provided, providing a default behavior
+- device list should just name devices with an id in a flat list. a detail command should show additional data on a specific device. use device ids (the last part of the device url) for the ids and also use the id:XXXXX syntax, preferring the name of the device to look it up if the id: heading is not provided
+- diagnostics get should have a default behavior where it fetches something

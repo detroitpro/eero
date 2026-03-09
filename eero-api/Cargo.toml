@@ -1,0 +1,35 @@
+[package]
+name = "eero-api"
+version = "0.1.0"
+edition = "2021"
+description = "Async Rust client library for the eero WiFi router API"
+license = "MIT"
+repository = "https://github.com/erikh/eeroctl"
+readme = "README.md"
+keywords = ["eero", "wifi", "router", "iot", "api"]
+categories = ["api-bindings", "network-programming"]
+
+[features]
+keyring = ["dep:keyring"]
+op = ["tokio/process"]
+dpapi = ["dep:windows-sys"]
+
+[dependencies]
+async-trait = "0.1"
+dirs = "6"
+reqwest = { version = "0.12", features = ["json", "cookies"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["fs", "rt"] }
+tracing = "0.1"
+
+keyring = { version = "3", optional = true }
+
+[dev-dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full", "test-util"] }
+tempfile = "3"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Security_Cryptography"], optional = true }
