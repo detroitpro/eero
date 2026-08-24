@@ -278,6 +278,57 @@ async fn list_devices(headers: HeaderMap, Path(_network_id): Path<u64>) -> Respo
     Json(wrap(json!([fixtures::device(), fixtures::device_2()]))).into_response()
 }
 
+fn validate_data_usage_query(body: &Value) -> Option<Response> {
+    for field in ["start", "end", "cadence", "timezone"] {
+        if body.get(field).and_then(Value::as_str).is_none() {
+            return Some(error_response(400, &format!("missing {field}")));
+        }
+    }
+    None
+}
+
+async fn get_data_usage(
+    headers: HeaderMap,
+    Path(_network_id): Path<u64>,
+    Json(body): Json<Value>,
+) -> Response {
+    if let Err(e) = check_auth(&headers) {
+        return e;
+    }
+    if let Some(e) = validate_data_usage_query(&body) {
+        return e;
+    }
+    Json(wrap(fixtures::data_usage())).into_response()
+}
+
+async fn get_device_data_usage(
+    headers: HeaderMap,
+    Path(_network_id): Path<u64>,
+    Json(body): Json<Value>,
+) -> Response {
+    if let Err(e) = check_auth(&headers) {
+        return e;
+    }
+    if let Some(e) = validate_data_usage_query(&body) {
+        return e;
+    }
+    Json(wrap(fixtures::device_data_usage())).into_response()
+}
+
+async fn get_eero_data_usage(
+    headers: HeaderMap,
+    Path(_network_id): Path<u64>,
+    Json(body): Json<Value>,
+) -> Response {
+    if let Err(e) = check_auth(&headers) {
+        return e;
+    }
+    if let Some(e) = validate_data_usage_query(&body) {
+        return e;
+    }
+    Json(wrap(fixtures::eero_data_usage())).into_response()
+}
+
 async fn get_device(headers: HeaderMap, Path(_device_id): Path<u64>) -> Response {
     if let Err(e) = check_auth(&headers) {
         return e;
@@ -417,6 +468,15 @@ fn common_routes() -> Router {
         .route("/eeros/{eero_id}", get(get_eero).put(update_eero))
         .route("/eeros/{eero_id}/reboot", post(reboot_eero))
         .route("/networks/{network_id}/devices", get(list_devices))
+        .route("/networks/{network_id}/data_usage", get(get_data_usage))
+        .route(
+            "/networks/{network_id}/data_usage/devices",
+            get(get_device_data_usage),
+        )
+        .route(
+            "/networks/{network_id}/data_usage/eeros",
+            get(get_eero_data_usage),
+        )
         .route(
             "/devices/{device_id}",
             get(get_device).put(update_device),
@@ -469,6 +529,15 @@ fn common_routes_speed_test_202() -> Router {
         .route("/eeros/{eero_id}", get(get_eero).put(update_eero))
         .route("/eeros/{eero_id}/reboot", post(reboot_eero))
         .route("/networks/{network_id}/devices", get(list_devices))
+        .route("/networks/{network_id}/data_usage", get(get_data_usage))
+        .route(
+            "/networks/{network_id}/data_usage/devices",
+            get(get_device_data_usage),
+        )
+        .route(
+            "/networks/{network_id}/data_usage/eeros",
+            get(get_eero_data_usage),
+        )
         .route(
             "/devices/{device_id}",
             get(get_device).put(update_device),

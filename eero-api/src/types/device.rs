@@ -66,8 +66,12 @@ pub struct DeviceProfile {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DeviceUsage {
-    pub down: Option<f64>,
-    pub up: Option<f64>,
+    /// Current download rate reported by the eero API, in Mbps.
+    #[serde(default, alias = "down")]
+    pub down_mbps: Option<f64>,
+    /// Current upload rate reported by the eero API, in Mbps.
+    #[serde(default, alias = "up")]
+    pub up_mbps: Option<f64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]

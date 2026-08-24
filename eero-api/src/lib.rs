@@ -4,7 +4,7 @@
 //! This crate provides an async client for interacting with eero mesh WiFi
 //! routers. It covers authentication, network management, device tracking,
 //! eero node control, profiles (parental controls), port forwarding,
-//! activity monitoring, diagnostics, and speed tests.
+//! activity monitoring, data usage, diagnostics, and speed tests.
 //!
 //! # Quick start
 //!

@@ -160,10 +160,30 @@ impl EeroClient {
     pub(crate) async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
         let headers = self.session_headers().await?;
         tracing::debug!(request_headers = ?headers, "GET request");
+        let resp = self.http.get(url).headers(headers).send().await?;
+        tracing::debug!(status = %resp.status(), response_headers = ?resp.headers(), "GET response");
+        let text = resp.text().await?;
+        tracing::debug!(body = %text, "GET response body");
+        let parsed: ApiResponse<T> = serde_json::from_str(&text)?;
+        Self::unwrap_response(parsed)
+    }
+
+    /// Perform an authenticated GET request with a JSON body.
+    #[tracing::instrument(skip(self, body))]
+    pub(crate) async fn get_with_json_body<B: Serialize, T: DeserializeOwned>(
+        &self,
+        url: &str,
+        body: &B,
+    ) -> Result<T> {
+        let headers = self.session_headers().await?;
+        let body_json = serde_json::to_string(body)?;
+        tracing::debug!(request_headers = ?headers, body = %body_json, "GET request with JSON body");
         let resp = self
             .http
             .get(url)
             .headers(headers)
+            .header("content-type", "application/json")
+            .body(body_json)
             .send()
             .await?;
         tracing::debug!(status = %resp.status(), response_headers = ?resp.headers(), "GET response");
