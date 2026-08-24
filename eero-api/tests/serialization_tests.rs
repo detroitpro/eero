@@ -1,6 +1,6 @@
 #![deny(dead_code)]
 
-use eero_api::types::device::DeviceUpdate;
+use eero_api::types::device::{DeviceUpdate, DeviceUsage};
 use eero_api::types::eero::EeroUpdate;
 use eero_api::types::envelope::{ApiResponse, Meta};
 use eero_api::types::forward::NewPortForward;
@@ -54,6 +54,17 @@ fn test_device_update_empty() {
     let update = DeviceUpdate::default();
     let json = serde_json::to_string(&update).unwrap();
     assert_eq!(json, "{}");
+}
+
+#[test]
+fn test_device_usage_accepts_live_and_legacy_field_names() {
+    let live: DeviceUsage = serde_json::from_str(r#"{"down_mbps":12.5,"up_mbps":3.25}"#).unwrap();
+    let legacy: DeviceUsage = serde_json::from_str(r#"{"down":4.0,"up":1.0}"#).unwrap();
+
+    assert_eq!(live.down_mbps, Some(12.5));
+    assert_eq!(live.up_mbps, Some(3.25));
+    assert_eq!(legacy.down_mbps, Some(4.0));
+    assert_eq!(legacy.up_mbps, Some(1.0));
 }
 
 #[test]

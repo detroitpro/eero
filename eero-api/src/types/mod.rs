@@ -11,6 +11,7 @@
 pub mod account;
 pub mod activity;
 pub mod auth;
+pub mod data_usage;
 pub mod device;
 pub mod diagnostic;
 pub mod eero;

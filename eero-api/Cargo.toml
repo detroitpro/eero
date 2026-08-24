@@ -28,6 +28,7 @@ keyring = { version = "3", optional = true }
 
 [dev-dependencies]
 axum = "0.8"
+time = { version = "0.3", features = ["formatting"] }
 tokio = { version = "1", features = ["full", "test-util"] }
 tempfile = "3"
 

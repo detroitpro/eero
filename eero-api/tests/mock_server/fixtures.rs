@@ -133,7 +133,7 @@ pub fn device() -> Value {
         "frequency": "5 GHz",
         "frequency_band": "5",
         "auth": "wpa3",
-        "usage": { "down": 1024.5, "up": 256.3 }
+        "usage": { "down_mbps": 12.5, "up_mbps": 3.25 }
     })
 }
 
@@ -266,6 +266,57 @@ pub fn client_activity() -> Value {
             "allowed": 3000,
             "inspected": 3005
         }
+    })
+}
+
+pub fn data_usage() -> Value {
+    json!({
+        "start": "2026-08-24T04:00:00Z",
+        "end": "2026-08-25T03:59:59Z",
+        "limit": "2026-04-30T00:00:00Z",
+        "series": [
+            {
+                "type": "upload",
+                "sum": 300,
+                "values": [{ "time": "2026-08-24T04:00:00Z", "value": 300 }]
+            },
+            {
+                "type": "download",
+                "sum": 1200,
+                "values": [{ "time": "2026-08-24T04:00:00Z", "value": 1200 }]
+            }
+        ]
+    })
+}
+
+pub fn device_data_usage() -> Value {
+    json!({
+        "start": "2026-08-24T04:00:00Z",
+        "end": "2026-08-25T03:59:59Z",
+        "values": [
+            {
+                "url": "/2.2/devices/2001",
+                "mac": "11:22:33:44:55:66",
+                "display_name": "MacBook Pro",
+                "download": 1200,
+                "upload": 300
+            }
+        ]
+    })
+}
+
+pub fn eero_data_usage() -> Value {
+    json!({
+        "start": "2026-08-24T04:00:00Z",
+        "end": "2026-08-25T03:59:59Z",
+        "values": [
+            {
+                "url": "/2.2/eeros/1001",
+                "location": "Living Room",
+                "download": 1200,
+                "upload": 300
+            }
+        ]
     })
 }
 

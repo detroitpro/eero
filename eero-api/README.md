@@ -8,6 +8,8 @@ This crate provides a typed, async client for interacting with eero mesh WiFi ro
 - Network management and settings
 - eero node control (LED, nightlight, reboot)
 - Connected device tracking and management
+- Live per-device upload and download rates
+- Network, device, and eero-node data usage
 - Profiles (parental controls)
 - Port forwarding rules
 - Activity monitoring (requires eero Plus)
@@ -128,6 +130,21 @@ eero-api = { version = "0.1", features = ["keyring"] }
 | `get_devices(network_id)` | `Vec<Device>` | List connected devices |
 | `get_device(url)` | `Device` | Get device by resource URL |
 | `update_device(url, update)` | `Device` | Update device (nickname, block, pause, profile) |
+
+`Device.usage` contains the current `down_mbps` and `up_mbps` rates reported
+by eero.
+
+### Data Usage
+
+The data-usage endpoints expect a JSON body on their GET requests. Pass a
+`DataUsageQuery` containing ISO-8601 `start` and `end` timestamps, a cadence,
+and an IANA timezone name.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_data_usage(network_id, query)` | `DataUsage` | Network upload/download time series |
+| `get_device_data_usage(network_id, query)` | `DataUsageBreakdown<DeviceDataUsage>` | Per-device byte totals |
+| `get_eero_data_usage(network_id, query)` | `DataUsageBreakdown<EeroDataUsage>` | Per-node byte totals |
 
 ### Profiles
 

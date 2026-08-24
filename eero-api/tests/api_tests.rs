@@ -2,6 +2,7 @@
 
 mod mock_server;
 
+use eero_api::types::data_usage::DataUsageQuery;
 use eero_api::types::device::DeviceUpdate;
 use eero_api::types::eero::EeroUpdate;
 use eero_api::types::forward::NewPortForward;
@@ -304,6 +305,66 @@ async fn test_list_devices() {
     let devices = client.get_devices(12345).await.unwrap();
     assert_eq!(devices.len(), 2);
     assert_eq!(devices[0].display_name, Some("MacBook Pro".to_string()));
+    assert_eq!(devices[0].usage.as_ref().unwrap().down_mbps, Some(12.5));
+    assert_eq!(devices[0].usage.as_ref().unwrap().up_mbps, Some(3.25));
+
+    server.shutdown();
+}
+
+fn data_usage_query() -> DataUsageQuery {
+    DataUsageQuery {
+        start: "2026-08-24T04:00:00Z".into(),
+        end: "2026-08-25T03:59:59Z".into(),
+        cadence: "hourly".into(),
+        timezone: "America/New_York".into(),
+    }
+}
+
+#[tokio::test]
+async fn test_get_data_usage() {
+    let server = MockServer::start().await;
+    let client = server.client_with_session(SESSION);
+
+    let usage = client
+        .get_data_usage(12345, &data_usage_query())
+        .await
+        .unwrap();
+    assert_eq!(usage.series.len(), 2);
+    assert_eq!(usage.series[0].usage_type, "upload");
+    assert_eq!(usage.series[0].sum, Some(300));
+    assert_eq!(usage.series[1].values[0].value, Some(1200));
+
+    server.shutdown();
+}
+
+#[tokio::test]
+async fn test_get_device_data_usage() {
+    let server = MockServer::start().await;
+    let client = server.client_with_session(SESSION);
+
+    let usage = client
+        .get_device_data_usage(12345, &data_usage_query())
+        .await
+        .unwrap();
+    assert_eq!(usage.values.len(), 1);
+    assert_eq!(usage.values[0].download, Some(1200));
+    assert_eq!(usage.values[0].upload, Some(300));
+
+    server.shutdown();
+}
+
+#[tokio::test]
+async fn test_get_eero_data_usage() {
+    let server = MockServer::start().await;
+    let client = server.client_with_session(SESSION);
+
+    let usage = client
+        .get_eero_data_usage(12345, &data_usage_query())
+        .await
+        .unwrap();
+    assert_eq!(usage.values.len(), 1);
+    assert_eq!(usage.values[0].location.as_deref(), Some("Living Room"));
+    assert_eq!(usage.values[0].download, Some(1200));
 
     server.shutdown();
 }

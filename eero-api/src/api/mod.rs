@@ -7,6 +7,7 @@
 //! - [`networks`] — Network settings, speed tests, guest network, reboot
 //! - [`eeros`] — Eero node listing, details, LED/nightlight settings, reboot
 //! - [`devices`] — Connected device listing, details, nickname/block/pause
+//! - [`data_usage`] — Network, device, and eero-node data usage
 //! - [`profiles`] — Parental control profiles
 //! - [`forwards`] — Port forwarding rules
 //! - [`activity`] — Network and per-device activity (eero Plus)
@@ -15,6 +16,7 @@
 pub mod account;
 pub mod activity;
 pub mod auth;
+pub mod data_usage;
 pub mod devices;
 pub mod diagnostics;
 pub mod eeros;
