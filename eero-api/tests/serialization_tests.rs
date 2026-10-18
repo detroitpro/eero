@@ -1,12 +1,12 @@
 #![deny(dead_code)]
 
+use eero_api::EeroClient;
 use eero_api::types::device::{DeviceUpdate, DeviceUsage};
 use eero_api::types::eero::EeroUpdate;
 use eero_api::types::envelope::{ApiResponse, Meta};
 use eero_api::types::forward::NewPortForward;
 use eero_api::types::network::{GuestNetworkUpdate, NetworkUpdate};
 use eero_api::types::profile::ProfileUpdate;
-use eero_api::EeroClient;
 
 #[test]
 fn test_network_update_empty() {

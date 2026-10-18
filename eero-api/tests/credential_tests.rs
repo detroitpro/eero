@@ -2,8 +2,8 @@
 
 use std::sync::{Arc, Mutex};
 
-use eero_api::credential::file::FileStore;
 use eero_api::credential::CredentialStore;
+use eero_api::credential::file::FileStore;
 use tempfile::TempDir;
 
 #[derive(Clone)]

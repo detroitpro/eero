@@ -71,7 +71,10 @@ async fn test_get_account() {
     assert_eq!(account.email.as_ref().unwrap().value, "test@example.com");
     assert_eq!(account.networks.count, 1);
     assert_eq!(account.networks.data.len(), 1);
-    assert_eq!(account.networks.data[0].name, Some("TestNetwork".to_string()));
+    assert_eq!(
+        account.networks.data[0].name,
+        Some("TestNetwork".to_string())
+    );
 
     server.shutdown();
 }
@@ -85,7 +88,10 @@ async fn test_get_account_unauthenticated() {
     assert!(result.is_err());
     let err = result.unwrap_err();
     let err_str = err.to_string();
-    assert!(err_str.contains("401"), "Expected 401 error, got: {err_str}");
+    assert!(
+        err_str.contains("401"),
+        "Expected 401 error, got: {err_str}"
+    );
 
     server.shutdown();
 }
@@ -233,7 +239,10 @@ async fn test_update_eero() {
         location: Some("Office".to_string()),
         ..Default::default()
     };
-    let eero = client.update_eero("/2.2/eeros/1001", &update).await.unwrap();
+    let eero = client
+        .update_eero("/2.2/eeros/1001", &update)
+        .await
+        .unwrap();
     assert_eq!(eero.location, Some("Office".to_string()));
 
     server.shutdown();
@@ -248,7 +257,10 @@ async fn test_update_eero_led() {
         led_on: Some(false),
         ..Default::default()
     };
-    let eero = client.update_eero("/2.2/eeros/1001", &update).await.unwrap();
+    let eero = client
+        .update_eero("/2.2/eeros/1001", &update)
+        .await
+        .unwrap();
     assert_eq!(eero.extra.get("led_on"), Some(&serde_json::json!(false)));
 
     server.shutdown();
@@ -269,7 +281,10 @@ async fn test_update_eero_nightlight() {
         }),
         ..Default::default()
     };
-    let eero = client.update_eero("/2.2/eeros/1001", &update).await.unwrap();
+    let eero = client
+        .update_eero("/2.2/eeros/1001", &update)
+        .await
+        .unwrap();
     let nightlight = eero.nightlight.unwrap();
     assert_eq!(nightlight["enabled"], serde_json::json!(true));
     assert_eq!(nightlight["brightness"], serde_json::json!(75));
@@ -515,7 +530,10 @@ async fn test_create_reservation() {
         mac: "22:33:44:55:66:77".to_string(),
         description: Some("Build box".to_string()),
     };
-    let created = client.create_reservation(12345, &reservation).await.unwrap();
+    let created = client
+        .create_reservation(12345, &reservation)
+        .await
+        .unwrap();
     assert_eq!(created.url, "/2.2/networks/12345/reservations/5003");
     assert_eq!(created.ip.as_deref(), Some("192.168.4.60"));
     assert_eq!(created.description.as_deref(), Some("Build box"));
@@ -535,7 +553,10 @@ async fn test_delete_reservation() {
     let missing = client
         .delete_reservation("/2.2/networks/12345/reservations/9999")
         .await;
-    assert!(matches!(missing, Err(eero_api::Error::Api { code: 404, .. })));
+    assert!(matches!(
+        missing,
+        Err(eero_api::Error::Api { code: 404, .. })
+    ));
 
     server.shutdown();
 }

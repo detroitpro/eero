@@ -1,8 +1,6 @@
 use crate::client::EeroClient;
 use crate::error::Result;
-use crate::types::network::{
-    GuestNetwork, GuestNetworkUpdate, Network, NetworkUpdate, SpeedTest,
-};
+use crate::types::network::{GuestNetwork, GuestNetworkUpdate, Network, NetworkUpdate, SpeedTest};
 
 impl EeroClient {
     /// Get network details by network ID.
@@ -21,11 +19,7 @@ impl EeroClient {
 
     /// Update network settings.
     #[tracing::instrument(skip(self, update))]
-    pub async fn update_network(
-        &self,
-        network_id: u64,
-        update: &NetworkUpdate,
-    ) -> Result<Network> {
+    pub async fn update_network(&self, network_id: u64, update: &NetworkUpdate) -> Result<Network> {
         let url = self.url(&format!("/networks/{network_id}"));
         self.put(&url, update).await
     }

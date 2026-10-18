@@ -3,7 +3,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, post, put};
 use axum::{Json, Router};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use super::fixtures;
 
@@ -26,10 +26,14 @@ fn error_response(code: u16, message: &str) -> Response {
         "meta": { "code": code, "error": message },
         "data": null
     });
-    (StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR), Json(body))
+    (
+        StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+        Json(body),
+    )
         .into_response()
 }
 
+#[allow(clippy::result_large_err)]
 fn check_auth(headers: &HeaderMap) -> std::result::Result<(), Response> {
     let cookie = headers
         .get("cookie")
@@ -85,9 +89,7 @@ async fn verify(headers: HeaderMap, Json(body): Json<Value>) -> Response {
     let mut response = Json(resp).into_response();
     response.headers_mut().insert(
         "set-cookie",
-        format!("s=session_test_token; Path=/; HttpOnly")
-            .parse()
-            .unwrap(),
+        "s=session_test_token; Path=/; HttpOnly".parse().unwrap(),
     );
     response
 }
@@ -227,7 +229,11 @@ async fn list_eeros(headers: HeaderMap, Path(_network_id): Path<u64>) -> Respons
     if let Err(e) = check_auth(&headers) {
         return e;
     }
-    Json(wrap(json!([fixtures::eero_node(), fixtures::eero_node_2()]))).into_response()
+    Json(wrap(json!([
+        fixtures::eero_node(),
+        fixtures::eero_node_2()
+    ])))
+    .into_response()
 }
 
 async fn get_eero(headers: HeaderMap, Path(_eero_id): Path<u64>) -> Response {
@@ -253,11 +259,12 @@ async fn update_eero(
         if let Some(led_on) = obj.get("led_on") {
             eero["led_on"] = led_on.clone();
         }
-        if let Some(nightlight) = obj.get("nightlight") {
-            if let (Some(existing), Some(incoming)) = (eero["nightlight"].as_object_mut(), nightlight.as_object()) {
-                for (k, v) in incoming {
-                    existing.insert(k.clone(), v.clone());
-                }
+        if let Some(nightlight) = obj.get("nightlight")
+            && let (Some(existing), Some(incoming)) =
+                (eero["nightlight"].as_object_mut(), nightlight.as_object())
+        {
+            for (k, v) in incoming {
+                existing.insert(k.clone(), v.clone());
             }
         }
     }
@@ -475,10 +482,7 @@ async fn get_activity(headers: HeaderMap, Path(_network_id): Path<u64>) -> Respo
     Json(wrap(fixtures::activity())).into_response()
 }
 
-async fn get_client_activity(
-    headers: HeaderMap,
-    Path((_device_id,)): Path<(u64,)>,
-) -> Response {
+async fn get_client_activity(headers: HeaderMap, Path((_device_id,)): Path<(u64,)>) -> Response {
     if let Err(e) = check_auth(&headers) {
         return e;
     }
@@ -521,7 +525,10 @@ fn common_routes() -> Router {
         .route("/login", post(login))
         .route("/logout", post(logout))
         .route("/account", get(get_account))
-        .route("/networks/{network_id}", get(get_network).put(update_network))
+        .route(
+            "/networks/{network_id}",
+            get(get_network).put(update_network),
+        )
         .route("/networks/{network_id}/reboot", post(reboot_network))
         .route(
             "/networks/{network_id}/speedtest",
@@ -567,10 +574,7 @@ fn common_routes() -> Router {
             "/networks/{network_id}/reservations/{reservation_id}",
             delete(delete_reservation),
         )
-        .route(
-            "/networks/{network_id}/activity",
-            get(get_activity),
-        )
+        .route("/networks/{network_id}/activity", get(get_activity))
         .route(
             "/networks/{network_id}/diagnostics",
             get(get_diagnostics).post(post_diagnostics),
@@ -595,7 +599,10 @@ fn common_routes_speed_test_202() -> Router {
         .route("/login", post(login))
         .route("/logout", post(logout))
         .route("/account", get(get_account))
-        .route("/networks/{network_id}", get(get_network).put(update_network))
+        .route(
+            "/networks/{network_id}",
+            get(get_network).put(update_network),
+        )
         .route("/networks/{network_id}/reboot", post(reboot_network))
         .route(
             "/networks/{network_id}/speedtest",
@@ -618,10 +625,7 @@ fn common_routes_speed_test_202() -> Router {
             "/networks/{network_id}/data_usage/eeros",
             get(get_eero_data_usage),
         )
-        .route(
-            "/devices/{device_id}",
-            get(get_device).put(update_device),
-        )
+        .route("/devices/{device_id}", get(get_device).put(update_device))
         .route("/devices/{device_id}/activity", get(get_client_activity))
         .route("/networks/{network_id}/profiles", get(list_profiles))
         .route(
@@ -633,10 +637,7 @@ fn common_routes_speed_test_202() -> Router {
             get(list_forwards).post(create_forward),
         )
         .route("/forwards/{forward_id}", delete(delete_forward))
-        .route(
-            "/networks/{network_id}/activity",
-            get(get_activity),
-        )
+        .route("/networks/{network_id}/activity", get(get_activity))
         .route(
             "/networks/{network_id}/diagnostics",
             get(get_diagnostics).post(post_diagnostics),
@@ -644,15 +645,13 @@ fn common_routes_speed_test_202() -> Router {
 }
 
 pub fn router_speed_test_202() -> Router {
-    let api = common_routes_speed_test_202()
-        .route("/login/verify", post(verify));
+    let api = common_routes_speed_test_202().route("/login/verify", post(verify));
 
     Router::new().nest("/2.2", api)
 }
 
 pub fn router_verify_no_cookie() -> Router {
-    let api = common_routes()
-        .route("/login/verify", post(verify_no_cookie));
+    let api = common_routes().route("/login/verify", post(verify_no_cookie));
 
     Router::new().nest("/2.2", api)
 }

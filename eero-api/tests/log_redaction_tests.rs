@@ -61,6 +61,9 @@ async fn trace_logs_never_contain_credentials_or_contact_details() {
         "test@example.com",
         "+15555550100",
     ] {
-        assert!(!text.contains(secret), "{secret:?} leaked into logs:\n{text}");
+        assert!(
+            !text.contains(secret),
+            "{secret:?} leaked into logs:\n{text}"
+        );
     }
 }

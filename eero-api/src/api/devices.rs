@@ -25,11 +25,7 @@ impl EeroClient {
 
     /// Update a device (nickname, blocked, paused, profile assignment).
     #[tracing::instrument(skip(self, update))]
-    pub async fn update_device(
-        &self,
-        device_url: &str,
-        update: &DeviceUpdate,
-    ) -> Result<Device> {
+    pub async fn update_device(&self, device_url: &str, update: &DeviceUpdate) -> Result<Device> {
         let url = self.resource_url(&device_write_url(device_url));
         self.put(&url, update).await
     }

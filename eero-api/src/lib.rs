@@ -57,6 +57,6 @@ pub mod error;
 pub mod types;
 
 pub use client::{ClientBuilder, EeroClient};
-pub use credential::memory::InMemoryStore;
 pub use credential::CredentialStore;
+pub use credential::memory::InMemoryStore;
 pub use error::{Error, Result};

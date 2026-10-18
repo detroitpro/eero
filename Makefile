@@ -3,11 +3,11 @@ EERO_IP ?=
 .PHONY: lint test install test-live test-live-default
 
 lint:
-	cargo clippy --workspace -- -D warnings
-	cargo check --workspace
+	cargo fmt --all --check
+	cargo clippy --workspace --all-targets -- -D warnings
 
 test: lint
-	cargo test -p eero-api -- --skip live_
+	cargo test --workspace -- --skip live_
 
 install:
 	cargo install --path eeroctl
