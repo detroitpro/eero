@@ -8,6 +8,7 @@ use eero_api::types::forward::NewPortForward;
 use eero_api::types::network::{GuestNetworkUpdate, NetworkUpdate};
 use eero_api::types::profile::{Profile, ProfileUpdate};
 use eero_api::types::account::NetworkRef;
+use eero_api::types::data_usage::DataUsageQuery;
 use eero_api::{ClientBuilder, EeroClient, InMemoryStore};
 use jaq_core::load::{Arena, File, Loader};
 use jaq_core::{Compiler, Ctx, RcIter};
@@ -142,6 +143,32 @@ enum NetworkCmd {
     /// Guest network commands
     #[command(subcommand)]
     Guest(GuestCmd),
+    /// Upload and download totals for a time window
+    DataUsage {
+        /// Network name (SSID) or `id:XXXXX`. Defaults to first network.
+        network: Option<String>,
+        /// Window start, ISO-8601 (e.g. 2026-08-24T04:00:00Z)
+        #[arg(long)]
+        start: String,
+        /// Window end, ISO-8601
+        #[arg(long)]
+        end: String,
+        /// Bucket size (e.g. hourly, daily)
+        #[arg(long, default_value = "hourly")]
+        cadence: String,
+        /// IANA timezone the buckets align to
+        #[arg(long, default_value = "UTC")]
+        timezone: String,
+        /// Break totals down by device or by eero node instead of a time series
+        #[arg(long, value_enum)]
+        by: Option<UsageBreakdown>,
+    },
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum UsageBreakdown {
+    Devices,
+    Eeros,
 }
 
 #[derive(Subcommand)]
@@ -813,6 +840,32 @@ async fn main() -> Result<()> {
                     out.print(&result)?;
                 }
             },
+            NetworkCmd::DataUsage {
+                network,
+                start,
+                end,
+                cadence,
+                timezone,
+                by,
+            } => {
+                let network_id =
+                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let query = DataUsageQuery {
+                    start,
+                    end,
+                    cadence,
+                    timezone,
+                };
+                match by {
+                    None => out.print(&client.get_data_usage(network_id, &query).await?)?,
+                    Some(UsageBreakdown::Devices) => {
+                        out.print(&client.get_device_data_usage(network_id, &query).await?)?
+                    }
+                    Some(UsageBreakdown::Eeros) => {
+                        out.print(&client.get_eero_data_usage(network_id, &query).await?)?
+                    }
+                }
+            }
             NetworkCmd::Guest(cmd) => match cmd {
                 GuestCmd::Get { network } => {
                     let network_id =

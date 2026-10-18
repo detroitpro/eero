@@ -410,6 +410,7 @@ eeroctl device get "id:2001"
 | `network get [network]` | Show network details (name, health, DNS, clients) |
 | `network set [network] --flag value` | Update network settings |
 | `network reboot [network]` | Reboot all eero nodes on the network |
+| `network data-usage [network] --start T --end T` | Upload/download totals for a window (`--cadence`, `--timezone`, `--by devices\|eeros`) |
 
 **Network set flags:** `--name`, `--password`, `--sqm`, `--band-steering`, `--thread`, `--upnp`, `--ipv6`, `--wpa3`
 
