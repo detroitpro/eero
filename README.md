@@ -60,7 +60,17 @@ The test suite includes unit tests, integration tests with a mock API server, an
 
 ## Installation
 
-Requires [Rust](https://www.rust-lang.org/tools/install) 1.70+.
+Linux x86_64 binaries (glibc 2.35+, OpenSSL 3, so Ubuntu 22.04 or newer) are attached to each
+[release](https://github.com/heka-vault/eero/releases) with a `.sha256`:
+
+```bash
+v=v0.2.0
+curl -fsSLO "https://github.com/heka-vault/eero/releases/download/$v/eeroctl-$v-x86_64-linux-gnu.tar.gz"
+curl -fsSL "https://github.com/heka-vault/eero/releases/download/$v/eeroctl-$v-x86_64-linux-gnu.tar.gz.sha256" | sha256sum -c
+tar xzf "eeroctl-$v-x86_64-linux-gnu.tar.gz" && install -m 755 "eeroctl-$v-x86_64-linux-gnu/eeroctl" ~/.local/bin/
+```
+
+Building from source requires [Rust](https://www.rust-lang.org/tools/install) 1.85+ (edition 2024).
 
 ```bash
 # From source

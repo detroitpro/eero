@@ -1,0 +1,54 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  linux-x86_64:
+    runs-on: ubuntu-latest
+    # The oldest supported LTS keeps the glibc floor low enough for every host.
+    container: ubuntu:22.04
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential ca-certificates curl git pkg-config libssl-dev
+          curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - uses: actions/checkout@v4
+      - name: Check the tag matches the crate version
+        run: |
+          version="$(grep -m1 '^version' eeroctl/Cargo.toml | cut -d'"' -f2)"
+          test "v$version" = "$GITHUB_REF_NAME" || {
+            echo "tag $GITHUB_REF_NAME does not match eeroctl $version"; exit 1; }
+      - run: cargo test --workspace --locked -- --skip live_
+      - run: cargo build --release --locked -p eeroctl
+      - name: Package
+        run: |
+          name="eeroctl-$GITHUB_REF_NAME-x86_64-linux-gnu"
+          mkdir "$name"
+          cp target/release/eeroctl LICENSE README.md "$name/"
+          tar czf "$name.tar.gz" "$name"
+          sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
+          ./target/release/eeroctl --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: eeroctl-*.tar.gz*
+  publish:
+    needs: linux-x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" eeroctl-*.tar.gz* \
+            --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

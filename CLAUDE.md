@@ -37,9 +37,9 @@ make test-live EERO_IP=<gateway>                 # read-only tests against a rea
   home network. Header values that carry it are marked sensitive; keep it that way, and keep raw
   auth request and response bodies out of logs. Tests assert this.
 - **No real network data anywhere in the repo.** Fixtures, docs, issues and PRs use the made-up
-  values already in `tests/mock_server/fixtures.rs` (`192.168.1.x`, `11:22:33:44:55:66`, network
-  `12345`). Redact network IDs, MAC addresses, IPs, SSIDs, emails and phone numbers from anything
-  copied out of a live run.
+  values already in `tests/mock_server/fixtures.rs` (network `12345`, `11:22:33:44:55:66`,
+  `test@example.com`). Redact network IDs, MAC addresses, IPs, SSIDs, emails and phone numbers
+  from anything copied out of a live run.
 - **eero's API is undocumented.** Reads live under `/2.2/`. Some writes only take effect under
   `/2.3/` and are silently ignored on `2.2` (device updates). When a write "succeeds" but nothing
   changes, check the version first. Note the source when you rely on a shape that other clients

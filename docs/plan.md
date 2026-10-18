@@ -54,15 +54,15 @@ never deletes something the inventory doesn't mention unless asked.
 
 | Issue | Work | Status |
 |---|---|---|
-| [#1](https://github.com/heka-vault/eero/issues/1) | Session token written to debug logs | |
-| [#2](https://github.com/heka-vault/eero/issues/2) | `auth login` prints the user token | |
-| [#3](https://github.com/heka-vault/eero/issues/3) | Token files created world-readable | |
-| [#4](https://github.com/heka-vault/eero/issues/4) | `device set` silently ignored (API 2.2 vs 2.3), from erikh/eero#1 | |
-| [#5](https://github.com/heka-vault/eero/issues/5) | `diagnostics run` 400 without a symptom, from erikh/eero#3 | |
-| [#6](https://github.com/heka-vault/eero/issues/6) | Data usage API, from erikh/eero#2 | |
-| [#7](https://github.com/heka-vault/eero/issues/7) | DHCP reservations | |
-| [#8](https://github.com/heka-vault/eero/issues/8) | `--version`; `--yes` for destructive commands | |
-| [#9](https://github.com/heka-vault/eero/issues/9) | Release binaries for Linux x86_64 | |
+| [#1](https://github.com/heka-vault/eero/issues/1) | Session token written to debug logs | Done in v0.2.0 (#12, #14) |
+| [#2](https://github.com/heka-vault/eero/issues/2) | `auth login` prints the user token | Done in v0.2.0 (#12) |
+| [#3](https://github.com/heka-vault/eero/issues/3) | Token files created world-readable | Done in v0.2.0 (#12) |
+| [#4](https://github.com/heka-vault/eero/issues/4) | `device set` silently ignored (API 2.2 vs 2.3), from erikh/eero#1 | Done in v0.2.0 (#13); needs a live check |
+| [#5](https://github.com/heka-vault/eero/issues/5) | `diagnostics run` 400 without a symptom, from erikh/eero#3 | Done in v0.2.0 (#14); accepted symptom values unknown |
+| [#6](https://github.com/heka-vault/eero/issues/6) | Data usage API, from erikh/eero#2 | Done in v0.2.0 (#10) |
+| [#7](https://github.com/heka-vault/eero/issues/7) | DHCP reservations | Done in v0.2.0 (#15); writes need a live check |
+| [#8](https://github.com/heka-vault/eero/issues/8) | `--version`; `--yes` for destructive commands | Done in v0.2.0 (#16) |
+| [#9](https://github.com/heka-vault/eero/issues/9) | Release binaries for Linux x86_64 | Done in v0.2.0 |
 
 ### Fleet integration (outside this repository)
 
