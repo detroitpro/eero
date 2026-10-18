@@ -46,9 +46,30 @@ impl FileStore {
         }
     }
 
+    /// Write a token readable only by its owner: the directory is `0700` and
+    /// the file `0600` on Unix. The file is written beside its final path and
+    /// renamed, so a reader never sees a partial token or looser permissions.
     async fn write_token(&self, path: PathBuf, token: &str) -> Result<()> {
         tokio::fs::create_dir_all(&self.dir).await?;
-        tokio::fs::write(&path, token).await?;
+        let tmp = path.with_extension("tmp");
+        let mut options = tokio::fs::OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            tokio::fs::set_permissions(&self.dir, std::fs::Permissions::from_mode(0o700)).await?;
+            options.mode(0o600);
+        }
+        let mut file = options.open(&tmp).await?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            file.set_permissions(std::fs::Permissions::from_mode(0o600)).await?;
+        }
+        tokio::io::AsyncWriteExt::write_all(&mut file, token.as_bytes()).await?;
+        file.sync_all().await?;
+        drop(file);
+        tokio::fs::rename(&tmp, &path).await?;
         Ok(())
     }
 

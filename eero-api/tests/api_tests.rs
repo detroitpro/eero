@@ -2,6 +2,8 @@
 
 mod mock_server;
 
+use std::sync::{Arc, Mutex};
+
 use eero_api::types::data_usage::DataUsageQuery;
 use eero_api::types::device::DeviceUpdate;
 use eero_api::types::eero::EeroUpdate;
@@ -619,6 +621,58 @@ fn test_network_extra_fields() {
     assert_eq!(network.name, Some("Net".to_string()));
     assert_eq!(network.extra["new_eero_feature"], serde_json::json!(true));
     assert_eq!(network.extra["future_field"], serde_json::json!("hello"));
+}
+
+#[derive(Clone, Default)]
+struct LogBuffer(Arc<Mutex<Vec<u8>>>);
+
+impl std::io::Write for LogBuffer {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(buf);
+        Ok(buf.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+#[tokio::test]
+async fn test_trace_logs_never_contain_credentials() {
+    let logs = LogBuffer::default();
+    let writer = logs.clone();
+    let subscriber = tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::TRACE)
+        .with_ansi(false)
+        .with_writer(move || writer.clone())
+        .finish();
+    let _guard = tracing::subscriber::set_default(subscriber);
+
+    let server = MockServer::start().await;
+    let client = server.client();
+    client.login("test@example.com").await.unwrap();
+    client.verify("123456").await.unwrap();
+    client.get_account().await.unwrap();
+    client.get_network(12345).await.unwrap();
+    client.get_guest_network(12345).await.unwrap();
+    let update = NetworkUpdate {
+        password: Some("new-wifi-password".to_string()),
+        ..Default::default()
+    };
+    client.update_network(12345, &update).await.unwrap();
+    server.shutdown();
+
+    let text = String::from_utf8(logs.0.lock().unwrap().clone()).unwrap();
+    assert!(text.contains("<redacted>"), "expected redacted bodies in:\n{text}");
+    for secret in [
+        "ut_test_token_12345",
+        "session_test_token",
+        "new-wifi-password",
+        "guestpass",
+        "testpass123",
+        "test@example.com",
+    ] {
+        assert!(!text.contains(secret), "{secret:?} leaked into logs:\n{text}");
+    }
 }
 
 #[test]
