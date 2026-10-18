@@ -120,6 +120,14 @@ async fn live_get_port_forwards() {
 }
 
 #[tokio::test]
+async fn live_get_reservations() {
+    skip_unless_live!();
+    let (client, id) = get_network_id().await;
+    let reservations = client.get_reservations(id).await.unwrap();
+    eprintln!("Reservations: {}", reservations.len());
+}
+
+#[tokio::test]
 async fn live_get_speed_test() {
     skip_unless_live!();
     let (client, id) = get_network_id().await;

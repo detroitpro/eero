@@ -426,6 +426,48 @@ async fn delete_forward(headers: HeaderMap, Path(_forward_id): Path<u64>) -> Res
     Json(wrap(json!({}))).into_response()
 }
 
+async fn list_reservations(headers: HeaderMap, Path(_network_id): Path<u64>) -> Response {
+    if let Err(e) = check_auth(&headers) {
+        return e;
+    }
+    Json(wrap(fixtures::reservations())).into_response()
+}
+
+async fn create_reservation(
+    headers: HeaderMap,
+    Path(network_id): Path<u64>,
+    Json(body): Json<Value>,
+) -> Response {
+    if let Err(e) = check_auth(&headers) {
+        return e;
+    }
+    for field in ["ip", "mac"] {
+        if body.get(field).and_then(|v| v.as_str()).is_none() {
+            let body = json!({
+                "meta": { "code": 400, "error": "error.form.errors" },
+                "data": { field: "error.form.field.required" }
+            });
+            return (StatusCode::BAD_REQUEST, Json(body)).into_response();
+        }
+    }
+    let mut created = body;
+    created["url"] = json!(format!("/2.2/networks/{network_id}/reservations/5003"));
+    Json(wrap(created)).into_response()
+}
+
+async fn delete_reservation(
+    headers: HeaderMap,
+    Path((_network_id, reservation_id)): Path<(u64, u64)>,
+) -> Response {
+    if let Err(e) = check_auth(&headers) {
+        return e;
+    }
+    if !(5001..=5002).contains(&reservation_id) {
+        return error_response(404, "error.reservation.not_found");
+    }
+    Json(wrap(json!({}))).into_response()
+}
+
 async fn get_activity(headers: HeaderMap, Path(_network_id): Path<u64>) -> Response {
     if let Err(e) = check_auth(&headers) {
         return e;
@@ -517,6 +559,14 @@ fn common_routes() -> Router {
             get(list_forwards).post(create_forward),
         )
         .route("/forwards/{forward_id}", delete(delete_forward))
+        .route(
+            "/networks/{network_id}/reservations",
+            get(list_reservations).post(create_reservation),
+        )
+        .route(
+            "/networks/{network_id}/reservations/{reservation_id}",
+            delete(delete_reservation),
+        )
         .route(
             "/networks/{network_id}/activity",
             get(get_activity),

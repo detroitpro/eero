@@ -162,6 +162,14 @@ and an IANA timezone name.
 | `create_port_forward(network_id, forward)` | `PortForward` | Create a forward |
 | `delete_port_forward(url)` | `Value` | Delete a forward |
 
+### DHCP Reservations
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `get_reservations(network_id)` | `Vec<Reservation>` | List reservations (`ip`, `mac`, `description`) |
+| `create_reservation(network_id, reservation)` | `Reservation` | Reserve an IP for a MAC |
+| `delete_reservation(url)` | `Value` | Delete a reservation |
+
 ### Activity
 
 | Method | Returns | Description |
