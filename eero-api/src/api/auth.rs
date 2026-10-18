@@ -1,6 +1,6 @@
-use reqwest::header::{HeaderValue, COOKIE};
+use reqwest::header::COOKIE;
 
-use crate::client::EeroClient;
+use crate::client::{redact_body, session_cookie, EeroClient};
 use crate::error::{Error, Result};
 use crate::types::auth::{LoginRequest, LoginResponse, VerifyRequest};
 use crate::types::envelope::ApiResponse;
@@ -38,7 +38,7 @@ impl EeroClient {
         };
 
         let body_json = serde_json::to_string(&body)?;
-        tracing::debug!(request_body = %body_json, "login request");
+        tracing::debug!("login request");
         let resp = self
             .http_client()
             .post(&url)
@@ -46,9 +46,9 @@ impl EeroClient {
             .body(body_json)
             .send()
             .await?;
-        tracing::debug!(status = %resp.status(), response_headers = ?resp.headers(), "login response");
+        tracing::debug!(status = %resp.status(), "login response");
         let text = resp.text().await?;
-        tracing::debug!(body = %text, "login response body");
+        tracing::debug!(body = %redact_body(&text), "login response body");
         let api_resp: ApiResponse<LoginResponse> = serde_json::from_str(&text)?;
 
         let data = Self::unwrap_response(api_resp)?;
@@ -75,10 +75,9 @@ impl EeroClient {
             code: code.to_string(),
         };
 
-        let cookie = HeaderValue::from_str(&format!("s={user_token}"))
-            .map_err(|e| Error::CredentialStore(e.to_string()))?;
+        let cookie = session_cookie(&user_token)?;
         let body_json = serde_json::to_string(&body)?;
-        tracing::debug!(request_headers = ?cookie, request_body = %body_json, "verify request");
+        tracing::debug!("verify request");
         let resp = self
             .http_client()
             .post(&url)
@@ -91,11 +90,11 @@ impl EeroClient {
         // Extract session token from Set-Cookie header, parsing manually
         // rather than using resp.cookies() which can miss cookies from
         // intermediate redirect responses.
-        tracing::debug!(status = %resp.status(), response_headers = ?resp.headers(), "verify response");
+        tracing::debug!(status = %resp.status(), "verify response");
         let session_token = extract_session_cookie(resp.headers());
 
         let text = resp.text().await?;
-        tracing::debug!(body = %text, "verify response body");
+        tracing::debug!(body = %redact_body(&text), "verify response body");
         let api_resp: ApiResponse<serde_json::Value> = serde_json::from_str(&text)?;
         let code = api_resp.meta.code;
         if !(200..300).contains(&code) {

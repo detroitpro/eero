@@ -129,6 +129,35 @@ async fn test_file_store_lifecycle() {
     assert!(store.get_user_token().await.unwrap().is_none());
 }
 
+#[cfg(unix)]
+#[tokio::test]
+async fn test_file_store_is_owner_only() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = TempDir::new().unwrap();
+    let store_dir = dir.path().join("eero");
+    let store = FileStore::with_dir(store_dir.clone());
+    store.set_session_token("file_session").await.unwrap();
+    store.set_user_token("file_user").await.unwrap();
+
+    let mode = |p: &std::path::Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode(&store_dir), 0o700);
+    assert_eq!(mode(&store_dir.join("session_token")), 0o600);
+    assert_eq!(mode(&store_dir.join("user_token")), 0o600);
+
+    std::fs::set_permissions(
+        store_dir.join("session_token"),
+        std::fs::Permissions::from_mode(0o644),
+    )
+    .unwrap();
+    store.set_session_token("rotated").await.unwrap();
+    assert_eq!(mode(&store_dir.join("session_token")), 0o600);
+    assert_eq!(
+        store.get_session_token().await.unwrap(),
+        Some("rotated".to_string())
+    );
+}
+
 #[tokio::test]
 async fn test_file_store_nonexistent_token() {
     let dir = TempDir::new().unwrap();

@@ -1,4 +1,5 @@
 use reqwest::header::{HeaderMap, HeaderValue, COOKIE};
+use reqwest::Method;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
@@ -9,6 +10,44 @@ use crate::types::envelope::ApiResponse;
 
 const BASE_URL: &str = "https://api-user.e2ro.com/2.2";
 const USER_AGENT: &str = "eero-api-rs/0.1";
+
+/// JSON keys whose values are credentials. [`redact_body`] masks them.
+const SECRET_KEYS: &[&str] = &["password", "user_token", "session_token", "token"];
+
+/// Build the `s=<token>` cookie, marked sensitive so `Debug` never prints it.
+pub(crate) fn session_cookie(token: &str) -> Result<HeaderValue> {
+    let mut value = HeaderValue::from_str(&format!("s={token}"))
+        .map_err(|e| Error::CredentialStore(e.to_string()))?;
+    value.set_sensitive(true);
+    Ok(value)
+}
+
+/// A request or response body made safe to log: credential fields masked,
+/// and non-JSON bodies reduced to their length.
+pub(crate) fn redact_body(text: &str) -> String {
+    fn mask(value: &mut serde_json::Value) {
+        match value {
+            serde_json::Value::Object(map) => {
+                for (key, v) in map.iter_mut() {
+                    if SECRET_KEYS.contains(&key.as_str()) && !v.is_null() {
+                        *v = serde_json::Value::String("<redacted>".into());
+                    } else {
+                        mask(v);
+                    }
+                }
+            }
+            serde_json::Value::Array(items) => items.iter_mut().for_each(mask),
+            _ => {}
+        }
+    }
+    match serde_json::from_str::<serde_json::Value>(text) {
+        Ok(mut value) => {
+            mask(&mut value);
+            value.to_string()
+        }
+        Err(_) => format!("<{} bytes>", text.len()),
+    }
+}
 
 /// Client for the eero WiFi router API.
 pub struct EeroClient {
@@ -123,11 +162,7 @@ impl EeroClient {
         };
         if let Some(token) = token {
             tracing::debug!("attaching cookie");
-            headers.insert(
-                COOKIE,
-                HeaderValue::from_str(&format!("s={token}"))
-                    .map_err(|e| Error::CredentialStore(e.to_string()))?,
-            );
+            headers.insert(COOKIE, session_cookie(&token)?);
         } else {
             tracing::debug!("no session token available");
         }
@@ -155,17 +190,36 @@ impl EeroClient {
         }
     }
 
+    /// Send a request with the session cookie and decode the response envelope.
+    ///
+    /// Only the method, URL, status and redacted bodies are logged: never
+    /// headers, which carry the session cookie.
+    pub(crate) async fn send<T: DeserializeOwned>(
+        &self,
+        method: Method,
+        url: &str,
+        body: Option<String>,
+    ) -> Result<ApiResponse<T>> {
+        let headers = self.session_headers().await?;
+        match &body {
+            Some(b) => tracing::debug!(%method, url, body = %redact_body(b), "request"),
+            None => tracing::debug!(%method, url, "request"),
+        }
+        let mut req = self.http.request(method, url).headers(headers);
+        if let Some(b) = body {
+            req = req.header("content-type", "application/json").body(b);
+        }
+        let resp = req.send().await?;
+        let status = resp.status();
+        let text = resp.text().await?;
+        tracing::debug!(%status, body = %redact_body(&text), "response");
+        Ok(serde_json::from_str(&text)?)
+    }
+
     /// Perform an authenticated GET request.
     #[tracing::instrument(skip(self))]
     pub(crate) async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
-        let headers = self.session_headers().await?;
-        tracing::debug!(request_headers = ?headers, "GET request");
-        let resp = self.http.get(url).headers(headers).send().await?;
-        tracing::debug!(status = %resp.status(), response_headers = ?resp.headers(), "GET response");
-        let text = resp.text().await?;
-        tracing::debug!(body = %text, "GET response body");
-        let parsed: ApiResponse<T> = serde_json::from_str(&text)?;
-        Self::unwrap_response(parsed)
+        Self::unwrap_response(self.send(Method::GET, url, None).await?)
     }
 
     /// Perform an authenticated GET request with a JSON body.
@@ -175,22 +229,8 @@ impl EeroClient {
         url: &str,
         body: &B,
     ) -> Result<T> {
-        let headers = self.session_headers().await?;
-        let body_json = serde_json::to_string(body)?;
-        tracing::debug!(request_headers = ?headers, body = %body_json, "GET request with JSON body");
-        let resp = self
-            .http
-            .get(url)
-            .headers(headers)
-            .header("content-type", "application/json")
-            .body(body_json)
-            .send()
-            .await?;
-        tracing::debug!(status = %resp.status(), response_headers = ?resp.headers(), "GET response");
-        let text = resp.text().await?;
-        tracing::debug!(body = %text, "GET response body");
-        let parsed: ApiResponse<T> = serde_json::from_str(&text)?;
-        Self::unwrap_response(parsed)
+        let body = Some(serde_json::to_string(body)?);
+        Self::unwrap_response(self.send(Method::GET, url, body).await?)
     }
 
     /// Perform an authenticated POST request with a JSON body.
@@ -200,40 +240,14 @@ impl EeroClient {
         url: &str,
         body: &B,
     ) -> Result<T> {
-        let headers = self.session_headers().await?;
-        let body_json = serde_json::to_string(body)?;
-        tracing::debug!(request_headers = ?headers, body = %body_json, "POST request");
-        let resp = self
-            .http
-            .post(url)
-            .headers(headers)
-            .header("content-type", "application/json")
-            .body(body_json)
-            .send()
-            .await?;
-        tracing::debug!(status = %resp.status(), response_headers = ?resp.headers(), "POST response");
-        let text = resp.text().await?;
-        tracing::debug!(body = %text, "POST response body");
-        let parsed: ApiResponse<T> = serde_json::from_str(&text)?;
-        Self::unwrap_response(parsed)
+        let body = Some(serde_json::to_string(body)?);
+        Self::unwrap_response(self.send(Method::POST, url, body).await?)
     }
 
     /// Perform an authenticated POST request without a body.
     #[tracing::instrument(skip(self))]
     pub(crate) async fn post_empty<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
-        let headers = self.session_headers().await?;
-        tracing::debug!(request_headers = ?headers, "POST (empty) request");
-        let resp = self
-            .http
-            .post(url)
-            .headers(headers)
-            .send()
-            .await?;
-        tracing::debug!(status = %resp.status(), response_headers = ?resp.headers(), "POST (empty) response");
-        let text = resp.text().await?;
-        tracing::debug!(body = %text, "POST (empty) response body");
-        let parsed: ApiResponse<T> = serde_json::from_str(&text)?;
-        Self::unwrap_response(parsed)
+        Self::unwrap_response(self.send(Method::POST, url, None).await?)
     }
 
     /// Perform an authenticated PUT request with a JSON body.
@@ -243,40 +257,14 @@ impl EeroClient {
         url: &str,
         body: &B,
     ) -> Result<T> {
-        let headers = self.session_headers().await?;
-        let body_json = serde_json::to_string(body)?;
-        tracing::debug!(request_headers = ?headers, body = %body_json, "PUT request");
-        let resp = self
-            .http
-            .put(url)
-            .headers(headers)
-            .header("content-type", "application/json")
-            .body(body_json)
-            .send()
-            .await?;
-        tracing::debug!(status = %resp.status(), response_headers = ?resp.headers(), "PUT response");
-        let text = resp.text().await?;
-        tracing::debug!(body = %text, "PUT response body");
-        let parsed: ApiResponse<T> = serde_json::from_str(&text)?;
-        Self::unwrap_response(parsed)
+        let body = Some(serde_json::to_string(body)?);
+        Self::unwrap_response(self.send(Method::PUT, url, body).await?)
     }
 
     /// Perform an authenticated DELETE request.
     #[tracing::instrument(skip(self))]
     pub(crate) async fn delete<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
-        let headers = self.session_headers().await?;
-        tracing::debug!(request_headers = ?headers, "DELETE request");
-        let resp = self
-            .http
-            .delete(url)
-            .headers(headers)
-            .send()
-            .await?;
-        tracing::debug!(status = %resp.status(), response_headers = ?resp.headers(), "DELETE response");
-        let text = resp.text().await?;
-        tracing::debug!(body = %text, "DELETE response body");
-        let parsed: ApiResponse<T> = serde_json::from_str(&text)?;
-        Self::unwrap_response(parsed)
+        Self::unwrap_response(self.send(Method::DELETE, url, None).await?)
     }
 
     /// Access the raw reqwest HTTP client (for advanced use cases).

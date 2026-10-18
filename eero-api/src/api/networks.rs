@@ -44,16 +44,9 @@ impl EeroClient {
     #[tracing::instrument(skip(self))]
     pub async fn run_speed_test(&self, network_id: u64) -> Result<serde_json::Value> {
         let url = self.url(&format!("/networks/{network_id}/speedtest"));
-        let headers = self.session_headers().await?;
-        let resp = self
-            .http
-            .post(&url)
-            .headers(headers)
-            .send()
+        let parsed = self
+            .send::<serde_json::Value>(reqwest::Method::POST, &url, None)
             .await?;
-        let text = resp.text().await?;
-        let parsed: crate::types::envelope::ApiResponse<serde_json::Value> =
-            serde_json::from_str(&text)?;
         let code = parsed.meta.code;
         if (200..300).contains(&code) {
             Ok(parsed.data.unwrap_or(serde_json::Value::Null))

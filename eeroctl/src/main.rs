@@ -21,8 +21,9 @@ use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 #[derive(Parser)]
 #[command(name = "eeroctl", about = "eero WiFi router management CLI")]
 struct Cli {
-    /// Session token to use instead of the login/verify flow
-    #[arg(long, global = true, env = "EERO_SESSION_TOKEN")]
+    /// Session token to use instead of the login/verify flow. Prefer the
+    /// environment variable: a flag is visible to other users in `ps`.
+    #[arg(long, global = true, env = "EERO_SESSION_TOKEN", hide_env_values = true)]
     user_token: Option<String>,
 
     /// Output in JSON format instead of YAML
@@ -763,8 +764,8 @@ async fn main() -> Result<()> {
     match cli.command {
         Command::Auth(cmd) => match cmd {
             AuthCmd::Login { email_or_phone } => {
-                let resp = client.login(&email_or_phone).await?;
-                out.print(&resp)?;
+                client.login(&email_or_phone).await?;
+                eprintln!("Verification code sent. Run `eeroctl auth verify <code>` next.");
             }
             AuthCmd::Verify { code } => {
                 client.verify(&code).await?;
