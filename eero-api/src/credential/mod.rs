@@ -9,6 +9,9 @@
 //! - `op::OpStore` — 1Password CLI (feature `op`)
 //! - `dpapi::DpapiStore` — Windows DPAPI (feature `dpapi`, Windows only)
 
+// async_trait marks each boxed future #[must_use] on top of the method's own.
+#![allow(clippy::double_must_use)]
+
 pub mod file;
 pub mod memory;
 #[cfg(feature = "keyring")]
