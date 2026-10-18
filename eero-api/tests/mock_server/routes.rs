@@ -1,7 +1,7 @@
 use axum::extract::Path;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{delete, get, post};
+use axum::routing::{delete, get, post, put};
 use axum::{Json, Router};
 use serde_json::{json, Value};
 
@@ -359,6 +359,14 @@ async fn update_device(
     Json(wrap(device)).into_response()
 }
 
+/// eero accepts device writes on API 2.2, returns 200 and changes nothing.
+async fn ignore_device_update(headers: HeaderMap, Path(_device_id): Path<u64>) -> Response {
+    if let Err(e) = check_auth(&headers) {
+        return e;
+    }
+    Json(wrap(fixtures::device())).into_response()
+}
+
 async fn list_profiles(headers: HeaderMap, Path(_network_id): Path<u64>) -> Response {
     if let Err(e) = check_auth(&headers) {
         return e;
@@ -479,7 +487,7 @@ fn common_routes() -> Router {
         )
         .route(
             "/devices/{device_id}",
-            get(get_device).put(update_device),
+            get(get_device).put(ignore_device_update),
         )
         .route("/devices/{device_id}/activity", get(get_client_activity))
         .route("/networks/{network_id}/profiles", get(list_profiles))
@@ -502,12 +510,17 @@ fn common_routes() -> Router {
         )
 }
 
+/// Writes that only take effect on API 2.3.
+fn v2_3_routes() -> Router {
+    Router::new().route("/devices/{device_id}", put(update_device))
+}
+
 pub fn router() -> Router {
     let api = common_routes()
         .route("/login/verify", post(verify))
         .route("/login/verify_no_cookie", post(verify_no_cookie));
 
-    Router::new().nest("/2.2", api)
+    Router::new().nest("/2.2", api).nest("/2.3", v2_3_routes())
 }
 
 fn common_routes_speed_test_202() -> Router {

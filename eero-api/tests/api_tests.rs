@@ -388,9 +388,11 @@ async fn test_update_device() {
     let server = MockServer::start().await;
     let client = server.client_with_session(SESSION);
 
+    // The mock, like eero, ignores device PUTs on 2.2 and applies them on 2.3.
     let update = DeviceUpdate {
         nickname: Some("My Laptop".to_string()),
         blocked: Some(true),
+        paused: Some(true),
         ..Default::default()
     };
     let device = client
@@ -399,6 +401,7 @@ async fn test_update_device() {
         .unwrap();
     assert_eq!(device.nickname, Some("My Laptop".to_string()));
     assert_eq!(device.blocked, Some(true));
+    assert_eq!(device.paused, Some(true));
 
     server.shutdown();
 }
