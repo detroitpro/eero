@@ -484,7 +484,7 @@ eeroctl device get "id:2001"
 | Command | Description |
 |---|---|
 | `diagnostics get [network]` | Get the latest diagnostic report |
-| `diagnostics run [network]` | Run a new diagnostic check |
+| `diagnostics run [network] [--symptom S] [--device D]` | Run a new diagnostic check (newer firmware requires `--symptom`) |
 
 ## Output Formats
 

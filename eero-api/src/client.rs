@@ -11,8 +11,16 @@ use crate::types::envelope::ApiResponse;
 const BASE_URL: &str = "https://api-user.e2ro.com/2.2";
 const USER_AGENT: &str = "eero-api-rs/0.1";
 
-/// JSON keys whose values are credentials. [`redact_body`] masks them.
-const SECRET_KEYS: &[&str] = &["password", "user_token", "session_token", "token"];
+/// JSON keys whose values are credentials or the account holder's contact
+/// details. [`redact_body`] masks them.
+const SECRET_KEYS: &[&str] = &[
+    "password",
+    "user_token",
+    "session_token",
+    "token",
+    "email",
+    "phone",
+];
 
 /// Build the `s=<token>` cookie, marked sensitive so `Debug` never prints it.
 pub(crate) fn session_cookie(token: &str) -> Result<HeaderValue> {
@@ -20,6 +28,22 @@ pub(crate) fn session_cookie(token: &str) -> Result<HeaderValue> {
         .map_err(|e| Error::CredentialStore(e.to_string()))?;
     value.set_sensitive(true);
     Ok(value)
+}
+
+/// The API's error code, plus the per-field reasons it puts in `data` for
+/// form errors, e.g. `error.form.errors (symptom: error.form.field.required)`.
+fn api_error_message(error: Option<String>, data: Option<&serde_json::Value>) -> String {
+    let mut message = error.unwrap_or_else(|| "unknown error".into());
+    if let Some(serde_json::Value::Object(fields)) = data {
+        let reasons: Vec<String> = fields
+            .iter()
+            .filter_map(|(field, reason)| Some(format!("{field}: {}", reason.as_str()?)))
+            .collect();
+        if !reasons.is_empty() {
+            message = format!("{message} ({})", reasons.join(", "));
+        }
+    }
+    message
 }
 
 /// A request or response body made safe to log: credential fields masked,
@@ -213,7 +237,22 @@ impl EeroClient {
         let status = resp.status();
         let text = resp.text().await?;
         tracing::debug!(%status, body = %redact_body(&text), "response");
-        Ok(serde_json::from_str(&text)?)
+        let raw: ApiResponse<serde_json::Value> = serde_json::from_str(&text)?;
+        let code = raw.meta.code;
+        if !(200..300).contains(&code) {
+            return Err(Error::Api {
+                code,
+                message: api_error_message(raw.meta.error, raw.data.as_ref()),
+            });
+        }
+        let data = match raw.data {
+            None | Some(serde_json::Value::Null) => None,
+            Some(value) => Some(serde_json::from_value(value)?),
+        };
+        Ok(ApiResponse {
+            meta: raw.meta,
+            data,
+        })
     }
 
     /// Perform an authenticated GET request.
