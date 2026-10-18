@@ -1,5 +1,11 @@
 # eeroctl
 
+> **This is heka's maintained fork of [erikh/eero](https://github.com/erikh/eero).** It adds
+> fixes and features for running eeroctl from automation: the session token stays out of logs,
+> output and world-readable files; device updates take effect; DHCP reservations; a `--yes` guard
+> on destructive commands; and release binaries. See [docs/plan.md](docs/plan.md) for what and
+> why. Issues and pull requests go to [heka-vault/eero](https://github.com/heka-vault/eero/issues).
+
 A command-line tool for managing [eero](https://eero.com) WiFi mesh routers. Built on the unofficial eero API, eeroctl gives you full control over your network from the terminal: view connected devices, manage profiles, configure port forwards, run speed tests, and more.
 
 This project consists of two crates:
@@ -48,7 +54,7 @@ If you have a different eero model and would like to help verify compatibility:
 
 1. Install eeroctl and authenticate (see below)
 2. Run through the basic commands (`account get`, `network get`, `eero list`, `device list`)
-3. Report any issues or unexpected output at [github.com/erikh/eeroctl/issues](https://github.com/erikh/eeroctl/issues)
+3. Report any issues or unexpected output at [github.com/heka-vault/eero/issues](https://github.com/heka-vault/eero/issues). Redact network IDs, MAC addresses, IPs and tokens first.
 
 The test suite includes unit tests, integration tests with a mock API server, and optional live tests that run against a real eero device. See [Running Tests](#running-tests) for details.
 
