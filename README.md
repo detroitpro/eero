@@ -518,7 +518,9 @@ eeroctl --jq '.[].display_name' device list -m
 | `--jq <EXPR>` | | Apply a jq filter expression (always outputs JSON) |
 | `-n` / `--no-color` | | Disable syntax highlighting |
 | `--user-token <TOKEN>` | `EERO_SESSION_TOKEN` | Session token (skips login flow) |
-| `--log-level <LEVEL>` | `LOG_LEVEL` | Logging level (debug, info, warn, error, trace) |
+| `--log-level <LEVEL>` | `LOG_LEVEL` | Logging level (debug, info, warn, error, trace). Tokens, passwords and account contact details are masked |
+| `-y` / `--yes` | | Skip the confirmation for reboots, deletes, Wi-Fi password changes and `auth logout`. Without a terminal these refuse to run unless `--yes` is given |
+| `--version` | | Print the version |
 
 ## Running Tests
 

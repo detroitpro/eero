@@ -21,8 +21,13 @@ use syntect::parsing::SyntaxSet;
 use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 #[derive(Parser)]
-#[command(name = "eeroctl", about = "eero WiFi router management CLI")]
+#[command(name = "eeroctl", version, about = "eero WiFi router management CLI")]
 struct Cli {
+    /// Skip the confirmation prompt for reboots, deletes, Wi-Fi password
+    /// changes and logout. Required when there is no terminal to ask on.
+    #[arg(long, short = 'y', global = true)]
+    yes: bool,
+
     /// Session token to use instead of the login/verify flow. Prefer the
     /// environment variable: a flag is visible to other users in `ps`.
     #[arg(long, global = true, env = "EERO_SESSION_TOKEN", hide_env_values = true)]
@@ -478,6 +483,37 @@ fn strip_defaults(value: serde_json::Value) -> serde_json::Value {
     }
 }
 
+/// Ask before an action that disrupts the network or deletes configuration.
+/// With `--yes` it goes ahead; without a terminal it refuses, so a script or
+/// agent can't do it by accident.
+fn confirm(action: &str, yes: bool) -> Result<()> {
+    let interactive = io::stdin().is_terminal() && io::stderr().is_terminal();
+    confirm_with(action, yes, interactive, &mut io::stdin().lock(), &mut io::stderr())
+}
+
+fn confirm_with(
+    action: &str,
+    yes: bool,
+    interactive: bool,
+    input: &mut impl io::BufRead,
+    prompt: &mut impl Write,
+) -> Result<()> {
+    if yes {
+        return Ok(());
+    }
+    if !interactive {
+        anyhow::bail!("refusing to {action} without --yes (no terminal to confirm on)");
+    }
+    write!(prompt, "This will {action}. Continue? [y/N] ")?;
+    prompt.flush()?;
+    let mut answer = String::new();
+    input.read_line(&mut answer)?;
+    match answer.trim().to_ascii_lowercase().as_str() {
+        "y" | "yes" => Ok(()),
+        _ => anyhow::bail!("aborted"),
+    }
+}
+
 struct Output {
     json: bool,
     no_color: bool,
@@ -819,6 +855,7 @@ async fn main() -> Result<()> {
         .with_env_filter(env_filter)
         .init();
     let out = Output::new(cli.json, cli.no_color, cli.jq.clone());
+    let yes = cli.yes;
 
     let client = if let Some(ref token) = cli.user_token {
         let store = InMemoryStore::new();
@@ -842,6 +879,10 @@ async fn main() -> Result<()> {
                 out.print_ok()?;
             }
             AuthCmd::Logout => {
+                confirm(
+                    "end this session for every machine that shares it",
+                    yes,
+                )?;
                 client.logout().await?;
                 out.print_ok()?;
             }
@@ -886,12 +927,25 @@ async fn main() -> Result<()> {
                     ..Default::default()
                 };
                 require_network_set_flags(&update)?;
+                if update.password.is_some() {
+                    confirm(
+                        "change the Wi-Fi password and disconnect every wireless device",
+                        yes,
+                    )?;
+                }
                 let network_id =
                     resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let result = client.update_network(network_id, &update).await?;
                 out.print(&result)?;
             }
             NetworkCmd::Reboot { network } => {
+                confirm(
+                    &format!(
+                        "reboot every eero on {}",
+                        network.as_deref().unwrap_or("the default network")
+                    ),
+                    yes,
+                )?;
                 let network_id =
                     resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let resp = client.reboot_network(network_id).await?;
@@ -1021,6 +1075,7 @@ async fn main() -> Result<()> {
                 out.print(&result)?;
             }
             EeroCmd::Reboot { eero, network } => {
+                confirm(&format!("reboot the eero {eero:?}"), yes)?;
                 let network_id =
                     resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let eero_node = resolve_eero(&client, network_id, &eero).await?;
@@ -1145,6 +1200,7 @@ async fn main() -> Result<()> {
                 out.print(&result)?;
             }
             ForwardCmd::Delete { forward_id } => {
+                confirm(&format!("delete port forward {forward_id}"), yes)?;
                 let url = format!("/2.2/forwards/{}", forward_id);
                 let resp = client.delete_port_forward(&url).await?;
                 out.print(&resp)?;
@@ -1179,6 +1235,14 @@ async fn main() -> Result<()> {
                     resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let reservations = client.get_reservations(network_id).await?;
                 let found = find_reservation(&reservations, &reservation)?;
+                confirm(
+                    &format!(
+                        "delete the reservation of {} for {}",
+                        found.ip.as_deref().unwrap_or("?"),
+                        found.mac.as_deref().unwrap_or("?")
+                    ),
+                    yes,
+                )?;
                 out.print(&client.delete_reservation(&found.url).await?)?;
             }
         },
@@ -1232,6 +1296,32 @@ async fn main() -> Result<()> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn test_confirm_with() {
+        let ask = |yes: bool, interactive: bool, answer: &str| {
+            let mut prompt = Vec::new();
+            let result = confirm_with(
+                "reboot the mesh",
+                yes,
+                interactive,
+                &mut answer.as_bytes(),
+                &mut prompt,
+            );
+            (result.map_err(|e| e.to_string()), String::from_utf8(prompt).unwrap())
+        };
+
+        assert_eq!(ask(true, false, ""), (Ok(()), String::new()));
+        let (result, prompt) = ask(false, false, "y\n");
+        assert!(result.unwrap_err().contains("--yes"));
+        assert!(prompt.is_empty());
+        let (result, prompt) = ask(false, true, "y\n");
+        assert!(result.is_ok());
+        assert_eq!(prompt, "This will reboot the mesh. Continue? [y/N] ");
+        assert!(ask(false, true, "YES\n").0.is_ok());
+        assert_eq!(ask(false, true, "\n").0, Err("aborted".to_string()));
+        assert_eq!(ask(false, true, "nope\n").0, Err("aborted".to_string()));
+    }
 
     fn reservations() -> Vec<Reservation> {
         serde_json::from_value(json!([
