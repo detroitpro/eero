@@ -19,11 +19,7 @@ impl EeroClient {
 
     /// Update an eero node (location, LED, nightlight settings).
     #[tracing::instrument(skip(self, update))]
-    pub async fn update_eero(
-        &self,
-        eero_url: &str,
-        update: &EeroUpdate,
-    ) -> Result<EeroNode> {
+    pub async fn update_eero(&self, eero_url: &str, update: &EeroUpdate) -> Result<EeroNode> {
         let url = self.resource_url(eero_url);
         self.put(&url, update).await
     }

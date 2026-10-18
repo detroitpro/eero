@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use crate::error::{Error, Result};
 use crate::credential::CredentialStore;
+use crate::error::{Error, Result};
 
 /// File-based credential store. Stores tokens as plain text files in the
 /// platform config directory (e.g. `~/.config/eero/` on Linux).
@@ -64,7 +64,8 @@ impl FileStore {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            file.set_permissions(std::fs::Permissions::from_mode(0o600)).await?;
+            file.set_permissions(std::fs::Permissions::from_mode(0o600))
+                .await?;
         }
         tokio::io::AsyncWriteExt::write_all(&mut file, token.as_bytes()).await?;
         file.sync_all().await?;

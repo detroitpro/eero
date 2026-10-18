@@ -140,7 +140,10 @@ async fn live_get_guest_network() {
     skip_unless_live!();
     let (client, id) = get_network_id().await;
     let guest = client.get_guest_network(id).await.unwrap();
-    eprintln!("Guest network: {:?} (enabled: {:?})", guest.name, guest.enabled);
+    eprintln!(
+        "Guest network: {:?} (enabled: {:?})",
+        guest.name, guest.enabled
+    );
 }
 
 #[tokio::test]

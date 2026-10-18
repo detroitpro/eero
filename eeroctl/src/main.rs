@@ -2,14 +2,14 @@ use std::io::{self, IsTerminal, Write};
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use eero_api::types::account::NetworkRef;
+use eero_api::types::data_usage::DataUsageQuery;
 use eero_api::types::device::{Device, DeviceUpdate};
+use eero_api::types::diagnostic::DiagnosticsRequest;
 use eero_api::types::eero::{EeroNode, EeroUpdate, NightlightScheduleUpdate, NightlightUpdate};
 use eero_api::types::forward::NewPortForward;
 use eero_api::types::network::{GuestNetworkUpdate, NetworkUpdate};
 use eero_api::types::profile::{Profile, ProfileUpdate};
-use eero_api::types::account::NetworkRef;
-use eero_api::types::data_usage::DataUsageQuery;
-use eero_api::types::diagnostic::DiagnosticsRequest;
 use eero_api::types::reservation::{NewReservation, Reservation};
 use eero_api::{ClientBuilder, EeroClient, InMemoryStore};
 use jaq_core::load::{Arena, File, Loader};
@@ -18,7 +18,7 @@ use jaq_json::Val;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
-use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
+use syntect::util::{LinesWithEndings, as_24_bit_terminal_escaped};
 
 #[derive(Parser)]
 #[command(name = "eeroctl", version, about = "eero WiFi router management CLI")]
@@ -30,7 +30,12 @@ struct Cli {
 
     /// Session token to use instead of the login/verify flow. Prefer the
     /// environment variable: a flag is visible to other users in `ps`.
-    #[arg(long, global = true, env = "EERO_SESSION_TOKEN", hide_env_values = true)]
+    #[arg(
+        long,
+        global = true,
+        env = "EERO_SESSION_TOKEN",
+        hide_env_values = true
+    )]
     user_token: Option<String>,
 
     /// Output in JSON format instead of YAML
@@ -488,7 +493,13 @@ fn strip_defaults(value: serde_json::Value) -> serde_json::Value {
 /// agent can't do it by accident.
 fn confirm(action: &str, yes: bool) -> Result<()> {
     let interactive = io::stdin().is_terminal() && io::stderr().is_terminal();
-    confirm_with(action, yes, interactive, &mut io::stdin().lock(), &mut io::stderr())
+    confirm_with(
+        action,
+        yes,
+        interactive,
+        &mut io::stdin().lock(),
+        &mut io::stderr(),
+    )
 }
 
 fn confirm_with(
@@ -656,10 +667,7 @@ async fn resolve_network_id(client: &EeroClient, network: &str) -> Result<u64> {
     }
 }
 
-async fn resolve_network_id_or_default(
-    client: &EeroClient,
-    network: Option<&str>,
-) -> Result<u64> {
+async fn resolve_network_id_or_default(client: &EeroClient, network: Option<&str>) -> Result<u64> {
     match network {
         Some(n) => resolve_network_id(client, n).await,
         None => {
@@ -759,11 +767,7 @@ fn find_device_by_name<'a>(devices: &'a [Device], name: &str) -> Result<&'a Devi
     }
 }
 
-async fn resolve_device(
-    client: &EeroClient,
-    network_id: u64,
-    device_arg: &str,
-) -> Result<Device> {
+async fn resolve_device(client: &EeroClient, network_id: u64, device_arg: &str) -> Result<Device> {
     let devices = client.get_devices(network_id).await?;
     if let Some(id_str) = device_arg.strip_prefix("id:") {
         devices
@@ -792,11 +796,7 @@ fn find_eero_by_name<'a>(eeros: &'a [EeroNode], name: &str) -> Result<&'a EeroNo
     }
 }
 
-async fn resolve_eero(
-    client: &EeroClient,
-    network_id: u64,
-    eero_arg: &str,
-) -> Result<EeroNode> {
+async fn resolve_eero(client: &EeroClient, network_id: u64, eero_arg: &str) -> Result<EeroNode> {
     let eeros = client.get_eeros(network_id).await?;
     if let Some(id_str) = eero_arg.strip_prefix("id:") {
         eeros
@@ -851,9 +851,7 @@ async fn main() -> Result<()> {
         tracing_subscriber::EnvFilter::from_default_env()
     };
 
-    tracing_subscriber::fmt()
-        .with_env_filter(env_filter)
-        .init();
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
     let out = Output::new(cli.json, cli.no_color, cli.jq.clone());
     let yes = cli.yes;
 
@@ -879,10 +877,7 @@ async fn main() -> Result<()> {
                 out.print_ok()?;
             }
             AuthCmd::Logout => {
-                confirm(
-                    "end this session for every machine that shares it",
-                    yes,
-                )?;
+                confirm("end this session for every machine that shares it", yes)?;
                 client.logout().await?;
                 out.print_ok()?;
             }
@@ -895,8 +890,7 @@ async fn main() -> Result<()> {
         },
         Command::Network(cmd) => match cmd {
             NetworkCmd::Get { network } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let network = client.get_network(network_id).await?;
                 out.print(&network)?;
             }
@@ -933,8 +927,7 @@ async fn main() -> Result<()> {
                         yes,
                     )?;
                 }
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let result = client.update_network(network_id, &update).await?;
                 out.print(&result)?;
             }
@@ -946,8 +939,7 @@ async fn main() -> Result<()> {
                     ),
                     yes,
                 )?;
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let resp = client.reboot_network(network_id).await?;
                 out.print(&resp)?;
             }
@@ -973,8 +965,7 @@ async fn main() -> Result<()> {
                 timezone,
                 by,
             } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let query = DataUsageQuery {
                     start,
                     end,
@@ -1019,14 +1010,12 @@ async fn main() -> Result<()> {
         },
         Command::Eero(cmd) => match cmd {
             EeroCmd::List { network } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let eeros = client.get_eeros(network_id).await?;
                 out.print(&eeros)?;
             }
             EeroCmd::Get { eero, network } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let eero_node = resolve_eero(&client, network_id, &eero).await?;
                 let full = client.get_eero(&eero_node.url).await?;
                 out.print(&full)?;
@@ -1068,16 +1057,14 @@ async fn main() -> Result<()> {
                     nightlight,
                 };
                 require_eero_set_flags(&update)?;
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let eero_node = resolve_eero(&client, network_id, &eero).await?;
                 let result = client.update_eero(&eero_node.url, &update).await?;
                 out.print(&result)?;
             }
             EeroCmd::Reboot { eero, network } => {
                 confirm(&format!("reboot the eero {eero:?}"), yes)?;
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let eero_node = resolve_eero(&client, network_id, &eero).await?;
                 let resp = client.reboot_eero(&eero_node.url).await?;
                 out.print(&resp)?;
@@ -1085,8 +1072,7 @@ async fn main() -> Result<()> {
         },
         Command::Device(cmd) => match cmd {
             DeviceCmd::List { network, machine } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let devices = client.get_devices(network_id).await?;
                 if machine || out.jq_filter.is_some() {
                     let summary: Vec<serde_json::Value> = devices
@@ -1113,8 +1099,7 @@ async fn main() -> Result<()> {
                 }
             }
             DeviceCmd::Get { device, network } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let dev = resolve_device(&client, network_id, &device).await?;
                 let full = client.get_device(&dev.url).await?;
                 out.print(&full)?;
@@ -1134,8 +1119,7 @@ async fn main() -> Result<()> {
                     profile,
                 };
                 require_device_set_flags(&update)?;
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let dev = resolve_device(&client, network_id, &device).await?;
                 let device = client.update_device(&dev.url, &update).await?;
                 out.print(&device)?;
@@ -1143,14 +1127,12 @@ async fn main() -> Result<()> {
         },
         Command::Profile(cmd) => match cmd {
             ProfileCmd::List { network } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let profiles = client.get_profiles(network_id).await?;
                 out.print(&profiles)?;
             }
             ProfileCmd::Get { profile, network } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let prof = resolve_profile(&client, network_id, &profile).await?;
                 let full = client.get_profile(&prof.url).await?;
                 out.print(&full)?;
@@ -1167,8 +1149,7 @@ async fn main() -> Result<()> {
                     ..Default::default()
                 };
                 require_profile_set_flags(&update)?;
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let prof = resolve_profile(&client, network_id, &profile).await?;
                 let result = client.update_profile(&prof.url, &update).await?;
                 out.print(&result)?;
@@ -1176,8 +1157,7 @@ async fn main() -> Result<()> {
         },
         Command::Forward(cmd) => match cmd {
             ForwardCmd::List { network } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let forwards = client.get_port_forwards(network_id).await?;
                 out.print(&forwards)?;
             }
@@ -1194,8 +1174,7 @@ async fn main() -> Result<()> {
                     external_port,
                     protocol,
                 };
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let result = client.create_port_forward(network_id, &forward).await?;
                 out.print(&result)?;
             }
@@ -1208,8 +1187,7 @@ async fn main() -> Result<()> {
         },
         Command::Reservation(cmd) => match cmd {
             ReservationCmd::List { network } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 out.print(&client.get_reservations(network_id).await?)?;
             }
             ReservationCmd::Create {
@@ -1218,8 +1196,7 @@ async fn main() -> Result<()> {
                 mac,
                 description,
             } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let reservation = NewReservation {
                     ip,
                     mac,
@@ -1231,8 +1208,7 @@ async fn main() -> Result<()> {
                 reservation,
                 network,
             } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let reservations = client.get_reservations(network_id).await?;
                 let found = find_reservation(&reservations, &reservation)?;
                 confirm(
@@ -1248,14 +1224,12 @@ async fn main() -> Result<()> {
         },
         Command::Activity(cmd) => match cmd {
             ActivityCmd::Get { network } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let activity = client.get_activity(network_id).await?;
                 out.print(&activity)?;
             }
             ActivityCmd::GetClient { device, network } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let dev = resolve_device(&client, network_id, &device).await?;
                 let activity = client.get_client_activity(&dev.url).await?;
                 out.print(&activity)?;
@@ -1263,8 +1237,7 @@ async fn main() -> Result<()> {
         },
         Command::Diagnostics(cmd) => match cmd {
             DiagnosticsCmd::Get { network } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let report = client.get_diagnostics(network_id).await?;
                 out.print(&report)?;
             }
@@ -1273,12 +1246,15 @@ async fn main() -> Result<()> {
                 symptom,
                 device,
             } => {
-                let network_id =
-                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let device = match device {
                     Some(arg) => {
                         let found = resolve_device(&client, network_id, &arg).await?;
-                        Some(found.mac.unwrap_or_else(|| extract_url_id(&found.url).to_string()))
+                        Some(
+                            found
+                                .mac
+                                .unwrap_or_else(|| extract_url_id(&found.url).to_string()),
+                        )
                     }
                     None => None,
                 };
@@ -1308,7 +1284,10 @@ mod tests {
                 &mut answer.as_bytes(),
                 &mut prompt,
             );
-            (result.map_err(|e| e.to_string()), String::from_utf8(prompt).unwrap())
+            (
+                result.map_err(|e| e.to_string()),
+                String::from_utf8(prompt).unwrap(),
+            )
         };
 
         assert_eq!(ask(true, false, ""), (Ok(()), String::new()));
@@ -1450,10 +1429,7 @@ mod tests {
 
     #[test]
     fn test_extract_network_id_valid() {
-        assert_eq!(
-            extract_network_id("/2.2/networks/12345").unwrap(),
-            12345
-        );
+        assert_eq!(extract_network_id("/2.2/networks/12345").unwrap(), 12345);
     }
 
     #[test]
@@ -1514,7 +1490,13 @@ mod tests {
         assert_eq!(result, input);
     }
 
-    fn make_device(url: &str, display_name: Option<&str>, nickname: Option<&str>, hostname: Option<&str>, mac: Option<&str>) -> Device {
+    fn make_device(
+        url: &str,
+        display_name: Option<&str>,
+        nickname: Option<&str>,
+        hostname: Option<&str>,
+        mac: Option<&str>,
+    ) -> Device {
         Device {
             url: url.to_string(),
             display_name: display_name.map(|s| s.to_string()),
@@ -1550,7 +1532,13 @@ mod tests {
 
     #[test]
     fn test_device_display_name_priority() {
-        let d = make_device("/d/1", Some("Display"), Some("Nick"), Some("host"), Some("AA:BB"));
+        let d = make_device(
+            "/d/1",
+            Some("Display"),
+            Some("Nick"),
+            Some("host"),
+            Some("AA:BB"),
+        );
         assert_eq!(device_display_name(&d), "Display");
 
         let d = make_device("/d/1", None, Some("Nick"), Some("host"), Some("AA:BB"));
@@ -1578,18 +1566,14 @@ mod tests {
 
     #[test]
     fn test_find_device_by_name_hostname() {
-        let devices = vec![
-            make_device("/d/1", None, None, Some("myhost"), None),
-        ];
+        let devices = vec![make_device("/d/1", None, None, Some("myhost"), None)];
         let found = find_device_by_name(&devices, "myhost").unwrap();
         assert_eq!(found.url, "/d/1");
     }
 
     #[test]
     fn test_find_device_by_name_not_found() {
-        let devices = vec![
-            make_device("/d/1", Some("Phone"), None, None, None),
-        ];
+        let devices = vec![make_device("/d/1", Some("Phone"), None, None, None)];
         assert!(find_device_by_name(&devices, "Tablet").is_err());
     }
 
@@ -1614,9 +1598,7 @@ mod tests {
 
     #[test]
     fn test_find_eero_by_name_not_found() {
-        let eeros = vec![
-            make_eero("/e/1", Some("Living Room")),
-        ];
+        let eeros = vec![make_eero("/e/1", Some("Living Room"))];
         assert!(find_eero_by_name(&eeros, "Kitchen").is_err());
     }
 
@@ -1641,9 +1623,7 @@ mod tests {
 
     #[test]
     fn test_find_profile_by_name_not_found() {
-        let profiles = vec![
-            make_profile("/p/1", Some("Default")),
-        ];
+        let profiles = vec![make_profile("/p/1", Some("Default"))];
         assert!(find_profile_by_name(&profiles, "Guests").is_err());
     }
 

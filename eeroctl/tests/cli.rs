@@ -17,7 +17,10 @@ fn version_names_the_binary() {
     let out = eeroctl(&["--version"]);
     assert!(out.status.success());
     let stdout = String::from_utf8(out.stdout).unwrap();
-    assert_eq!(stdout.trim(), format!("eeroctl {}", env!("CARGO_PKG_VERSION")));
+    assert_eq!(
+        stdout.trim(),
+        format!("eeroctl {}", env!("CARGO_PKG_VERSION"))
+    );
 }
 
 #[test]

@@ -29,7 +29,17 @@ impl OpStore {
 
     async fn get(&self, item: &str) -> Result<Option<String>> {
         let output = Command::new("op")
-            .args(["item", "get", item, "--vault", &self.vault, "--fields", "password", "--format", "json"])
+            .args([
+                "item",
+                "get",
+                item,
+                "--vault",
+                &self.vault,
+                "--fields",
+                "password",
+                "--format",
+                "json",
+            ])
             .output()
             .await
             .map_err(|e| Error::CredentialStore(format!("failed to run op: {e}")))?;
@@ -57,8 +67,11 @@ impl OpStore {
         // Try to edit first, then create if it doesn't exist
         let output = Command::new("op")
             .args([
-                "item", "edit", item,
-                "--vault", &self.vault,
+                "item",
+                "edit",
+                item,
+                "--vault",
+                &self.vault,
                 &format!("password={value}"),
             ])
             .output()
@@ -69,10 +82,14 @@ impl OpStore {
             // Item doesn't exist, create it
             let output = Command::new("op")
                 .args([
-                    "item", "create",
-                    "--category", "password",
-                    "--title", item,
-                    "--vault", &self.vault,
+                    "item",
+                    "create",
+                    "--category",
+                    "password",
+                    "--title",
+                    item,
+                    "--vault",
+                    &self.vault,
                     &format!("password={value}"),
                 ])
                 .output()

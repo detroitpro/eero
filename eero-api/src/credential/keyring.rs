@@ -15,8 +15,8 @@ impl KeyringStore {
     }
 
     fn get(&self, key: &'static str) -> Result<Option<String>> {
-        let entry = keyring::Entry::new(SERVICE, key)
-            .map_err(|e| Error::CredentialStore(e.to_string()))?;
+        let entry =
+            keyring::Entry::new(SERVICE, key).map_err(|e| Error::CredentialStore(e.to_string()))?;
         match entry.get_password() {
             Ok(val) => Ok(Some(val)),
             Err(keyring::Error::NoEntry) => Ok(None),
@@ -25,16 +25,16 @@ impl KeyringStore {
     }
 
     fn set(&self, key: &'static str, value: &str) -> Result<()> {
-        let entry = keyring::Entry::new(SERVICE, key)
-            .map_err(|e| Error::CredentialStore(e.to_string()))?;
+        let entry =
+            keyring::Entry::new(SERVICE, key).map_err(|e| Error::CredentialStore(e.to_string()))?;
         entry
             .set_password(value)
             .map_err(|e| Error::CredentialStore(e.to_string()))
     }
 
     fn delete(&self, key: &'static str) -> Result<()> {
-        let entry = keyring::Entry::new(SERVICE, key)
-            .map_err(|e| Error::CredentialStore(e.to_string()))?;
+        let entry =
+            keyring::Entry::new(SERVICE, key).map_err(|e| Error::CredentialStore(e.to_string()))?;
         match entry.delete_credential() {
             Ok(()) => Ok(()),
             Err(keyring::Error::NoEntry) => Ok(()),

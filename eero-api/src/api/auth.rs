@@ -1,6 +1,6 @@
 use reqwest::header::COOKIE;
 
-use crate::client::{redact_body, session_cookie, EeroClient};
+use crate::client::{EeroClient, redact_body, session_cookie};
 use crate::error::{Error, Result};
 use crate::types::auth::{LoginRequest, LoginResponse, VerifyRequest};
 use crate::types::envelope::ApiResponse;
@@ -52,9 +52,7 @@ impl EeroClient {
         let api_resp: ApiResponse<LoginResponse> = serde_json::from_str(&text)?;
 
         let data = Self::unwrap_response(api_resp)?;
-        self.credentials()
-            .set_user_token(&data.user_token)
-            .await?;
+        self.credentials().set_user_token(&data.user_token).await?;
         Ok(data)
     }
 

@@ -55,9 +55,8 @@ impl DpapiStore {
             return Err(Error::CredentialStore("CryptProtectData failed".into()));
         }
 
-        let encrypted = unsafe {
-            std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec()
-        };
+        let encrypted =
+            unsafe { std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec() };
         unsafe {
             windows_sys::Win32::System::Memory::LocalFree(output.pbData as _);
         }
@@ -93,9 +92,8 @@ impl DpapiStore {
             return Err(Error::CredentialStore("CryptUnprotectData failed".into()));
         }
 
-        let decrypted = unsafe {
-            std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec()
-        };
+        let decrypted =
+            unsafe { std::slice::from_raw_parts(output.pbData, output.cbData as usize).to_vec() };
         unsafe {
             windows_sys::Win32::System::Memory::LocalFree(output.pbData as _);
         }

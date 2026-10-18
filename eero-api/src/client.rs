@@ -1,10 +1,10 @@
-use reqwest::header::{HeaderMap, HeaderValue, COOKIE};
 use reqwest::Method;
-use serde::de::DeserializeOwned;
+use reqwest::header::{COOKIE, HeaderMap, HeaderValue};
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 
-use crate::credential::file::FileStore;
 use crate::credential::CredentialStore;
+use crate::credential::file::FileStore;
 use crate::error::{Error, Result};
 use crate::types::envelope::ApiResponse;
 
@@ -197,12 +197,10 @@ impl EeroClient {
     pub fn unwrap_response<T>(response: ApiResponse<T>) -> Result<T> {
         let code = response.meta.code;
         if (200..300).contains(&code) {
-            response
-                .data
-                .ok_or_else(|| Error::Api {
-                    code,
-                    message: "response contained no data".into(),
-                })
+            response.data.ok_or_else(|| Error::Api {
+                code,
+                message: "response contained no data".into(),
+            })
         } else {
             Err(Error::Api {
                 code,

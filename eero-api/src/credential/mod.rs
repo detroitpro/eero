@@ -12,14 +12,14 @@
 // async_trait marks each boxed future #[must_use] on top of the method's own.
 #![allow(clippy::double_must_use)]
 
-pub mod file;
-pub mod memory;
-#[cfg(feature = "keyring")]
-pub mod keyring;
-#[cfg(feature = "op")]
-pub mod op;
 #[cfg(all(feature = "dpapi", target_os = "windows"))]
 pub mod dpapi;
+pub mod file;
+#[cfg(feature = "keyring")]
+pub mod keyring;
+pub mod memory;
+#[cfg(feature = "op")]
+pub mod op;
 
 use crate::error::Result;
 
