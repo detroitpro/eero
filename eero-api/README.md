@@ -174,7 +174,7 @@ and an IANA timezone name.
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `get_diagnostics(network_id)` | `DiagnosticReport` | Latest diagnostic report |
-| `run_diagnostics(network_id)` | `DiagnosticReport` | Run a new diagnostic check |
+| `run_diagnostics(network_id, &DiagnosticsRequest)` | `DiagnosticReport` | Run a new diagnostic check; newer firmware requires `symptom` |
 
 ## Type System
 

@@ -450,9 +450,26 @@ async fn get_diagnostics(headers: HeaderMap, Path(_network_id): Path<u64>) -> Re
     Json(wrap(fixtures::diagnostics())).into_response()
 }
 
-async fn post_diagnostics(headers: HeaderMap, Path(_network_id): Path<u64>) -> Response {
+/// Like newer firmware: a run without a symptom is a 400 form error.
+async fn post_diagnostics(
+    headers: HeaderMap,
+    Path(_network_id): Path<u64>,
+    body: Option<Json<Value>>,
+) -> Response {
     if let Err(e) = check_auth(&headers) {
         return e;
+    }
+    let has_symptom = body
+        .as_ref()
+        .and_then(|Json(b)| b.get("symptom"))
+        .and_then(|s| s.as_str())
+        .is_some_and(|s| !s.is_empty());
+    if !has_symptom {
+        let body = json!({
+            "meta": { "code": 400, "error": "error.form.errors" },
+            "data": { "symptom": "error.form.field.required" }
+        });
+        return (StatusCode::BAD_REQUEST, Json(body)).into_response();
     }
     Json(wrap(fixtures::diagnostics())).into_response()
 }

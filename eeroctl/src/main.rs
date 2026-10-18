@@ -9,6 +9,7 @@ use eero_api::types::network::{GuestNetworkUpdate, NetworkUpdate};
 use eero_api::types::profile::{Profile, ProfileUpdate};
 use eero_api::types::account::NetworkRef;
 use eero_api::types::data_usage::DataUsageQuery;
+use eero_api::types::diagnostic::DiagnosticsRequest;
 use eero_api::{ClientBuilder, EeroClient, InMemoryStore};
 use jaq_core::load::{Arena, File, Loader};
 use jaq_core::{Compiler, Ctx, RcIter};
@@ -377,6 +378,13 @@ enum DiagnosticsCmd {
     Run {
         /// Network name (SSID) or `id:XXXXX`. Defaults to first network.
         network: Option<String>,
+        /// What is wrong, as the eero app's health check asks. Newer
+        /// firmware requires it.
+        #[arg(long)]
+        symptom: Option<String>,
+        /// Device name or `id:XXXXX` to focus the check on
+        #[arg(long)]
+        device: Option<String>,
     },
 }
 
@@ -1102,10 +1110,22 @@ async fn main() -> Result<()> {
                 let report = client.get_diagnostics(network_id).await?;
                 out.print(&report)?;
             }
-            DiagnosticsCmd::Run { network } => {
+            DiagnosticsCmd::Run {
+                network,
+                symptom,
+                device,
+            } => {
                 let network_id =
                     resolve_network_id_or_default(&client, network.as_deref()).await?;
-                let report = client.run_diagnostics(network_id).await?;
+                let device = match device {
+                    Some(arg) => {
+                        let found = resolve_device(&client, network_id, &arg).await?;
+                        Some(found.mac.unwrap_or_else(|| extract_url_id(&found.url).to_string()))
+                    }
+                    None => None,
+                };
+                let request = DiagnosticsRequest { symptom, device };
+                let report = client.run_diagnostics(network_id, &request).await?;
                 out.print(&report)?;
             }
         },

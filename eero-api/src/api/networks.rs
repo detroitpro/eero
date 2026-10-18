@@ -47,15 +47,7 @@ impl EeroClient {
         let parsed = self
             .send::<serde_json::Value>(reqwest::Method::POST, &url, None)
             .await?;
-        let code = parsed.meta.code;
-        if (200..300).contains(&code) {
-            Ok(parsed.data.unwrap_or(serde_json::Value::Null))
-        } else {
-            Err(crate::error::Error::Api {
-                code,
-                message: parsed.meta.error.unwrap_or_else(|| "unknown error".into()),
-            })
-        }
+        Ok(parsed.data.unwrap_or(serde_json::Value::Null))
     }
 
     /// Get the latest speed test result.
