@@ -206,6 +206,23 @@ pub fn port_forward() -> Value {
     })
 }
 
+pub fn reservations() -> Value {
+    json!([
+        {
+            "url": "/2.2/networks/12345/reservations/5001",
+            "ip": "192.168.4.50",
+            "mac": "11:22:33:44:55:66",
+            "description": "NAS"
+        },
+        {
+            "url": "/2.2/networks/12345/reservations/5002",
+            "ip": "192.168.4.51",
+            "mac": "AA:BB:CC:DD:EE:11",
+            "description": "Printer"
+        }
+    ])
+}
+
 pub fn speed_test() -> Value {
     json!([
         {

@@ -9,6 +9,7 @@ use eero_api::types::eero::EeroUpdate;
 use eero_api::types::forward::NewPortForward;
 use eero_api::types::network::{GuestNetworkUpdate, NetworkUpdate};
 use eero_api::types::profile::ProfileUpdate;
+use eero_api::types::reservation::NewReservation;
 use mock_server::MockServer;
 
 const SESSION: &str = "test_session_token";
@@ -486,6 +487,55 @@ async fn test_delete_port_forward() {
 
     let result = client.delete_port_forward("/2.2/forwards/4001").await;
     assert!(result.is_ok());
+
+    server.shutdown();
+}
+
+#[tokio::test]
+async fn test_list_reservations() {
+    let server = MockServer::start().await;
+    let client = server.client_with_session(SESSION);
+
+    let reservations = client.get_reservations(12345).await.unwrap();
+    assert_eq!(reservations.len(), 2);
+    assert_eq!(reservations[0].ip.as_deref(), Some("192.168.4.50"));
+    assert_eq!(reservations[0].mac.as_deref(), Some("11:22:33:44:55:66"));
+    assert_eq!(reservations[1].description.as_deref(), Some("Printer"));
+
+    server.shutdown();
+}
+
+#[tokio::test]
+async fn test_create_reservation() {
+    let server = MockServer::start().await;
+    let client = server.client_with_session(SESSION);
+
+    let reservation = NewReservation {
+        ip: "192.168.4.60".to_string(),
+        mac: "22:33:44:55:66:77".to_string(),
+        description: Some("Build box".to_string()),
+    };
+    let created = client.create_reservation(12345, &reservation).await.unwrap();
+    assert_eq!(created.url, "/2.2/networks/12345/reservations/5003");
+    assert_eq!(created.ip.as_deref(), Some("192.168.4.60"));
+    assert_eq!(created.description.as_deref(), Some("Build box"));
+
+    server.shutdown();
+}
+
+#[tokio::test]
+async fn test_delete_reservation() {
+    let server = MockServer::start().await;
+    let client = server.client_with_session(SESSION);
+
+    client
+        .delete_reservation("/2.2/networks/12345/reservations/5001")
+        .await
+        .unwrap();
+    let missing = client
+        .delete_reservation("/2.2/networks/12345/reservations/9999")
+        .await;
+    assert!(matches!(missing, Err(eero_api::Error::Api { code: 404, .. })));
 
     server.shutdown();
 }

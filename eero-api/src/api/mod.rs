@@ -10,6 +10,7 @@
 //! - [`data_usage`] — Network, device, and eero-node data usage
 //! - [`profiles`] — Parental control profiles
 //! - [`forwards`] — Port forwarding rules
+//! - [`reservations`] — DHCP reservations
 //! - [`activity`] — Network and per-device activity (eero Plus)
 //! - [`diagnostics`] — Network diagnostic reports
 
@@ -23,3 +24,4 @@ pub mod eeros;
 pub mod forwards;
 pub mod networks;
 pub mod profiles;
+pub mod reservations;

@@ -10,6 +10,7 @@ use eero_api::types::profile::{Profile, ProfileUpdate};
 use eero_api::types::account::NetworkRef;
 use eero_api::types::data_usage::DataUsageQuery;
 use eero_api::types::diagnostic::DiagnosticsRequest;
+use eero_api::types::reservation::{NewReservation, Reservation};
 use eero_api::{ClientBuilder, EeroClient, InMemoryStore};
 use jaq_core::load::{Arena, File, Loader};
 use jaq_core::{Compiler, Ctx, RcIter};
@@ -70,6 +71,9 @@ enum Command {
     /// Port forwarding commands
     #[command(subcommand)]
     Forward(ForwardCmd),
+    /// DHCP reservation commands
+    #[command(subcommand)]
+    Reservation(ReservationCmd),
     /// Activity commands
     #[command(subcommand)]
     Activity(ActivityCmd),
@@ -348,6 +352,64 @@ enum ForwardCmd {
         /// Port forward ID
         forward_id: String,
     },
+}
+
+#[derive(Subcommand)]
+enum ReservationCmd {
+    /// List DHCP reservations on a network
+    List {
+        /// Network name (SSID) or `id:XXXXX`. Defaults to first network.
+        network: Option<String>,
+    },
+    /// Reserve an IP address for a MAC address
+    Create {
+        /// Network name (SSID) or `id:XXXXX`. Defaults to first network.
+        network: Option<String>,
+        /// IP address to reserve
+        #[arg(long)]
+        ip: String,
+        /// MAC address of the device (aa:bb:cc:dd:ee:ff)
+        #[arg(long)]
+        mac: String,
+        /// Label shown in the eero app
+        #[arg(long)]
+        description: Option<String>,
+    },
+    /// Delete a DHCP reservation
+    Delete {
+        /// Reservation MAC address, IP address, or `id:XXXXX`
+        reservation: String,
+        /// Network name (SSID) or `id:XXXXX`. Defaults to first network.
+        #[arg(long)]
+        network: Option<String>,
+    },
+}
+
+/// Find a reservation by `id:XXXXX`, MAC address (any case, `:` or `-`), or IP address.
+fn find_reservation<'a>(reservations: &'a [Reservation], arg: &str) -> Result<&'a Reservation> {
+    let normalize_mac = |m: &str| m.to_ascii_lowercase().replace('-', ":");
+    let matches: Vec<&Reservation> = if let Some(id) = arg.strip_prefix("id:") {
+        reservations
+            .iter()
+            .filter(|r| extract_url_id(&r.url) == id)
+            .collect()
+    } else if arg.parse::<std::net::IpAddr>().is_ok() {
+        reservations
+            .iter()
+            .filter(|r| r.ip.as_deref() == Some(arg))
+            .collect()
+    } else {
+        let mac = normalize_mac(arg);
+        reservations
+            .iter()
+            .filter(|r| r.mac.as_deref().map(normalize_mac).as_deref() == Some(mac.as_str()))
+            .collect()
+    };
+    match matches.as_slice() {
+        [one] => Ok(one),
+        [] => anyhow::bail!("no reservation matches {arg:?}"),
+        _ => anyhow::bail!("{} reservations match {arg:?}; use id:XXXXX", matches.len()),
+    }
 }
 
 #[derive(Subcommand)]
@@ -1088,6 +1150,38 @@ async fn main() -> Result<()> {
                 out.print(&resp)?;
             }
         },
+        Command::Reservation(cmd) => match cmd {
+            ReservationCmd::List { network } => {
+                let network_id =
+                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                out.print(&client.get_reservations(network_id).await?)?;
+            }
+            ReservationCmd::Create {
+                network,
+                ip,
+                mac,
+                description,
+            } => {
+                let network_id =
+                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let reservation = NewReservation {
+                    ip,
+                    mac,
+                    description,
+                };
+                out.print(&client.create_reservation(network_id, &reservation).await?)?;
+            }
+            ReservationCmd::Delete {
+                reservation,
+                network,
+            } => {
+                let network_id =
+                    resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let reservations = client.get_reservations(network_id).await?;
+                let found = find_reservation(&reservations, &reservation)?;
+                out.print(&client.delete_reservation(&found.url).await?)?;
+            }
+        },
         Command::Activity(cmd) => match cmd {
             ActivityCmd::Get { network } => {
                 let network_id =
@@ -1138,6 +1232,26 @@ async fn main() -> Result<()> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    fn reservations() -> Vec<Reservation> {
+        serde_json::from_value(json!([
+            {"url": "/2.2/networks/1/reservations/5001", "ip": "192.168.4.50", "mac": "11:22:33:44:55:66"},
+            {"url": "/2.2/networks/1/reservations/5002", "ip": "192.168.4.51", "mac": "AA:BB:CC:DD:EE:11"}
+        ]))
+        .unwrap()
+    }
+
+    #[test]
+    fn test_find_reservation_by_id_ip_and_mac() {
+        let all = reservations();
+        let id = |arg: &str| extract_url_id(&find_reservation(&all, arg).unwrap().url).to_string();
+        assert_eq!(id("id:5002"), "5002");
+        assert_eq!(id("192.168.4.50"), "5001");
+        assert_eq!(id("aa-bb-cc-dd-ee-11"), "5002");
+        assert_eq!(id("11:22:33:44:55:66"), "5001");
+        assert!(find_reservation(&all, "192.168.4.99").is_err());
+        assert!(find_reservation(&all, "id:9999").is_err());
+    }
 
     #[test]
     fn test_is_default() {

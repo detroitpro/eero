@@ -472,6 +472,14 @@ eeroctl device get "id:2001"
 
 **Forward create flags:** `--ip-address` (required), `--port` (required), `--external-port`, `--protocol` (tcp, udp, or tcp_udp)
 
+### DHCP Reservations
+
+| Command | Description |
+|---|---|
+| `reservation list [network]` | List DHCP reservations |
+| `reservation create [network] --ip IP --mac MAC [--description D]` | Reserve an IP address for a MAC address |
+| `reservation delete <mac\|ip\|id:XXXXX> [--network N]` | Delete a reservation, found by MAC, IP or ID |
+
 ### Activity
 
 | Command | Description |
