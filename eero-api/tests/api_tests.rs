@@ -472,10 +472,24 @@ async fn test_list_port_forwards() {
 
     let forwards = client.get_port_forwards(12345).await.unwrap();
     assert_eq!(forwards.len(), 1);
-    assert_eq!(forwards[0].port, Some("8080".to_string()));
-    assert_eq!(forwards[0].protocol, Some("tcp".to_string()));
+    assert_eq!(forwards[0].ip.as_deref(), Some("192.168.4.50"));
+    assert_eq!(forwards[0].client_port, Some(8080));
+    assert_eq!(forwards[0].gateway_port, Some(80));
+    assert_eq!(forwards[0].protocol.as_deref(), Some("tcp"));
+    assert_eq!(forwards[0].description.as_deref(), Some("Web Server"));
 
     server.shutdown();
+}
+
+#[test]
+fn test_port_forward_accepts_string_ports() {
+    let forward: eero_api::types::forward::PortForward =
+        serde_json::from_value(serde_json::json!({
+            "url": "/2.2/networks/1/forwards/1", "client_port": "51820", "gateway_port": null
+        }))
+        .unwrap();
+    assert_eq!(forward.client_port, Some(51820));
+    assert_eq!(forward.gateway_port, None);
 }
 
 #[tokio::test]
@@ -484,13 +498,17 @@ async fn test_create_port_forward() {
     let client = server.client_with_session(SESSION);
 
     let forward = NewPortForward {
-        ip_address: "192.168.4.100".to_string(),
-        port: "3000".to_string(),
-        external_port: Some("3000".to_string()),
-        protocol: Some("tcp".to_string()),
+        ip: "192.168.4.50".to_string(),
+        client_port: 3000,
+        gateway_port: 3000,
+        protocol: "both".to_string(),
+        enabled: true,
+        description: Some("Game server".to_string()),
     };
     let result = client.create_port_forward(12345, &forward).await.unwrap();
-    assert_eq!(result.enabled, Some(true));
+    assert_eq!(result.url, "/2.2/networks/12345/forwards/4002");
+    assert_eq!(result.client_port, Some(3000));
+    assert_eq!(result.protocol.as_deref(), Some("both"));
 
     server.shutdown();
 }
@@ -500,8 +518,12 @@ async fn test_delete_port_forward() {
     let server = MockServer::start().await;
     let client = server.client_with_session(SESSION);
 
-    let result = client.delete_port_forward("/2.2/forwards/4001").await;
-    assert!(result.is_ok());
+    client
+        .delete_port_forward("/2.2/networks/12345/forwards/4001")
+        .await
+        .unwrap();
+    let old_style = client.delete_port_forward("/2.2/forwards/4001").await;
+    assert!(old_style.is_err(), "forwards live under their network");
 
     server.shutdown();
 }

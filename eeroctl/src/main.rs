@@ -344,23 +344,28 @@ enum ForwardCmd {
     Create {
         /// Network name (SSID) or `id:XXXXX`. Defaults to first network.
         network: Option<String>,
-        /// Internal IP address
+        /// IP address of the device (usually one with a DHCP reservation)
         #[arg(long)]
-        ip_address: String,
-        /// Internal port
+        ip: String,
+        /// Port on the device
         #[arg(long)]
-        port: String,
-        /// External port (defaults to same as internal)
+        port: u16,
+        /// Port on the WAN side (defaults to --port)
         #[arg(long)]
-        external_port: Option<String>,
-        /// Protocol (tcp, udp, or tcp_udp)
+        external_port: Option<u16>,
+        #[arg(long, value_parser = ["tcp", "udp", "both"], default_value = "tcp")]
+        protocol: String,
+        /// Label shown in the eero app
         #[arg(long)]
-        protocol: Option<String>,
+        description: Option<String>,
     },
     /// Delete a port forward
     Delete {
-        /// Port forward ID
-        forward_id: String,
+        /// Port forward ID (`id:XXXXX` or the bare ID from `forward list`)
+        forward: String,
+        /// Network name (SSID) or `id:XXXXX`. Defaults to first network.
+        #[arg(long)]
+        network: Option<String>,
     },
 }
 
@@ -1163,26 +1168,34 @@ async fn main() -> Result<()> {
             }
             ForwardCmd::Create {
                 network,
-                ip_address,
+                ip,
                 port,
                 external_port,
                 protocol,
+                description,
             } => {
                 let forward = NewPortForward {
-                    ip_address,
-                    port,
-                    external_port,
+                    ip,
+                    client_port: port,
+                    gateway_port: external_port.unwrap_or(port),
                     protocol,
+                    enabled: true,
+                    description,
                 };
                 let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
                 let result = client.create_port_forward(network_id, &forward).await?;
                 out.print(&result)?;
             }
-            ForwardCmd::Delete { forward_id } => {
-                confirm(&format!("delete port forward {forward_id}"), yes)?;
-                let url = format!("/2.2/forwards/{}", forward_id);
-                let resp = client.delete_port_forward(&url).await?;
-                out.print(&resp)?;
+            ForwardCmd::Delete { forward, network } => {
+                let id = forward.strip_prefix("id:").unwrap_or(&forward);
+                confirm(&format!("delete port forward {id}"), yes)?;
+                let network_id = resolve_network_id_or_default(&client, network.as_deref()).await?;
+                let forwards = client.get_port_forwards(network_id).await?;
+                let found = forwards
+                    .iter()
+                    .find(|f| extract_url_id(&f.url) == id)
+                    .ok_or_else(|| anyhow::anyhow!("no port forward with ID {id:?}"))?;
+                out.print(&client.delete_port_forward(&found.url).await?)?;
             }
         },
         Command::Reservation(cmd) => match cmd {
