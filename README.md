@@ -33,16 +33,17 @@ Set up port forwarding with a single command:
 $ eeroctl forward create --help
 Create a port forward
 
-Usage: eeroctl forward create [OPTIONS] --ip-address <IP_ADDRESS> --port <PORT> [NETWORK]
+Usage: eeroctl forward create [OPTIONS] --ip <IP> --port <PORT> [NETWORK]
 
 Arguments:
   [NETWORK]  Network name (SSID) or `id:XXXXX`. Defaults to first network
 
 Options:
-      --ip-address <IP_ADDRESS>        Internal IP address
-      --port <PORT>                    Internal port
-      --external-port <EXTERNAL_PORT>  External port (defaults to same as internal)
-      --protocol <PROTOCOL>            Protocol (tcp, udp, or tcp_udp)
+      --ip <IP>                        IP address of the device (usually one with a DHCP reservation)
+      --port <PORT>                    Port on the device
+      --external-port <EXTERNAL_PORT>  Port on the WAN side (defaults to --port)
+      --protocol <PROTOCOL>            [default: tcp] [possible values: tcp, udp, both]
+      --description <DESCRIPTION>      Label shown in the eero app
   -h, --help                           Print help
 ```
 
@@ -294,12 +295,14 @@ schedule:
 
 ```
 $ eeroctl forward list
-- enabled: true
-  ip_address: 192.168.4.100
-  port: '8080'
-  external_port: '80'
+- url: /2.2/networks/12345/forwards/4001
+  enabled: true
+  ip: 192.168.4.50
+  client_port: 8080
+  gateway_port: 80
   protocol: tcp
-  display_name: Web Server
+  description: Web Server
+  reservation: /2.2/networks/12345/reservations/5001
 ```
 
 ### guest get
@@ -477,10 +480,10 @@ eeroctl device get "id:2001"
 | Command | Description |
 |---|---|
 | `forward list [network]` | List port forwarding rules |
-| `forward create [network] --ip-address IP --port PORT` | Create a port forward |
-| `forward delete <forward_id>` | Delete a port forward by ID |
+| `forward create [network] --ip IP --port PORT` | Create a port forward |
+| `forward delete <id> [--network N]` | Delete a port forward by the ID `forward list` shows |
 
-**Forward create flags:** `--ip-address` (required), `--port` (required), `--external-port`, `--protocol` (tcp, udp, or tcp_udp)
+**Forward create flags:** `--ip` (required), `--port` (required, the device's port), `--external-port` (WAN side, defaults to `--port`), `--protocol` (`tcp`, `udp` or `both`; default `tcp`), `--description`
 
 ### DHCP Reservations
 

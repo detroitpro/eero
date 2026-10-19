@@ -195,14 +195,14 @@ pub fn profile_2() -> Value {
 
 pub fn port_forward() -> Value {
     json!({
-        "url": "/2.2/forwards/4001",
+        "url": "/2.2/networks/12345/forwards/4001",
         "enabled": true,
-        "ip_address": "192.168.4.100",
-        "port": "8080",
-        "external_port": "80",
+        "ip": "192.168.4.50",
+        "client_port": 8080,
+        "gateway_port": 80,
         "protocol": "tcp",
-        "hostname": "macbook-pro",
-        "display_name": "Web Server"
+        "description": "Web Server",
+        "reservation": "/2.2/networks/12345/reservations/5001"
     })
 }
 

@@ -415,20 +415,41 @@ async fn list_forwards(headers: HeaderMap, Path(_network_id): Path<u64>) -> Resp
     Json(wrap(json!([fixtures::port_forward()]))).into_response()
 }
 
+/// Accepts only the live body shape and echoes it back with a URL.
 async fn create_forward(
     headers: HeaderMap,
-    Path(_network_id): Path<u64>,
-    Json(_body): Json<Value>,
+    Path(network_id): Path<u64>,
+    Json(body): Json<Value>,
 ) -> Response {
     if let Err(e) = check_auth(&headers) {
         return e;
     }
-    Json(wrap(fixtures::port_forward())).into_response()
+    let ok = body["ip"].is_string()
+        && body["client_port"].is_u64()
+        && body["gateway_port"].is_u64()
+        && body["protocol"].is_string()
+        && body["enabled"].is_boolean();
+    if !ok {
+        let body = json!({
+            "meta": { "code": 400, "error": "error.form.errors" },
+            "data": { "client_port": "error.form.field.required" }
+        });
+        return (StatusCode::BAD_REQUEST, Json(body)).into_response();
+    }
+    let mut created = body;
+    created["url"] = json!(format!("/2.2/networks/{network_id}/forwards/4002"));
+    Json(wrap(created)).into_response()
 }
 
-async fn delete_forward(headers: HeaderMap, Path(_forward_id): Path<u64>) -> Response {
+async fn delete_forward(
+    headers: HeaderMap,
+    Path((_network_id, forward_id)): Path<(u64, u64)>,
+) -> Response {
     if let Err(e) = check_auth(&headers) {
         return e;
+    }
+    if forward_id != 4001 {
+        return error_response(404, "error.forward.not_found");
     }
     Json(wrap(json!({}))).into_response()
 }
@@ -565,7 +586,10 @@ fn common_routes() -> Router {
             "/networks/{network_id}/forwards",
             get(list_forwards).post(create_forward),
         )
-        .route("/forwards/{forward_id}", delete(delete_forward))
+        .route(
+            "/networks/{network_id}/forwards/{forward_id}",
+            delete(delete_forward),
+        )
         .route(
             "/networks/{network_id}/reservations",
             get(list_reservations).post(create_reservation),
@@ -636,7 +660,10 @@ fn common_routes_speed_test_202() -> Router {
             "/networks/{network_id}/forwards",
             get(list_forwards).post(create_forward),
         )
-        .route("/forwards/{forward_id}", delete(delete_forward))
+        .route(
+            "/networks/{network_id}/forwards/{forward_id}",
+            delete(delete_forward),
+        )
         .route("/networks/{network_id}/activity", get(get_activity))
         .route(
             "/networks/{network_id}/diagnostics",

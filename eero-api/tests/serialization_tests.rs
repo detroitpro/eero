@@ -109,33 +109,37 @@ fn test_guest_network_update_empty() {
 }
 
 #[test]
-fn test_new_port_forward_required_fields() {
+fn test_new_port_forward_body_matches_the_api() {
     let forward = NewPortForward {
-        ip_address: "192.168.1.100".to_string(),
-        port: "8080".to_string(),
-        external_port: None,
-        protocol: None,
+        ip: "192.168.1.100".to_string(),
+        client_port: 8080,
+        gateway_port: 80,
+        protocol: "tcp".to_string(),
+        enabled: true,
+        description: None,
     };
     let json = serde_json::to_value(&forward).unwrap();
-    assert_eq!(json.get("ip_address").unwrap(), "192.168.1.100");
-    assert_eq!(json.get("port").unwrap(), "8080");
-    assert!(json.get("external_port").is_none());
-    assert!(json.get("protocol").is_none());
+    assert_eq!(
+        json,
+        serde_json::json!({
+            "ip": "192.168.1.100", "client_port": 8080, "gateway_port": 80,
+            "protocol": "tcp", "enabled": true
+        })
+    );
 }
 
 #[test]
-fn test_new_port_forward_all_fields() {
+fn test_new_port_forward_with_description() {
     let forward = NewPortForward {
-        ip_address: "192.168.1.100".to_string(),
-        port: "8080".to_string(),
-        external_port: Some("80".to_string()),
-        protocol: Some("tcp".to_string()),
+        ip: "192.168.1.100".to_string(),
+        client_port: 51820,
+        gateway_port: 51820,
+        protocol: "udp".to_string(),
+        enabled: true,
+        description: Some("VPN".to_string()),
     };
     let json = serde_json::to_value(&forward).unwrap();
-    assert_eq!(json.get("ip_address").unwrap(), "192.168.1.100");
-    assert_eq!(json.get("port").unwrap(), "8080");
-    assert_eq!(json.get("external_port").unwrap(), "80");
-    assert_eq!(json.get("protocol").unwrap(), "tcp");
+    assert_eq!(json.get("description").unwrap(), "VPN");
 }
 
 #[test]
