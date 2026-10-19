@@ -65,7 +65,7 @@ Linux x86_64 binaries (glibc 2.35+, OpenSSL 3, so Ubuntu 22.04 or newer) are att
 [release](https://github.com/heka-vault/eero/releases) with a `.sha256`:
 
 ```bash
-v=v0.2.1
+v=v0.2.2
 curl -fsSLO "https://github.com/heka-vault/eero/releases/download/$v/eeroctl-$v-x86_64-linux-gnu.tar.gz"
 curl -fsSL "https://github.com/heka-vault/eero/releases/download/$v/eeroctl-$v-x86_64-linux-gnu.tar.gz.sha256" | sha256sum -c
 tar xzf "eeroctl-$v-x86_64-linux-gnu.tar.gz" && install -m 755 "eeroctl-$v-x86_64-linux-gnu/eeroctl" ~/.local/bin/

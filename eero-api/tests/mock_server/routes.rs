@@ -275,7 +275,7 @@ async fn reboot_eero(headers: HeaderMap, Path(_eero_id): Path<u64>) -> Response 
     if let Err(e) = check_auth(&headers) {
         return e;
     }
-    Json(wrap(json!({}))).into_response()
+    Json(wrap(Value::Null)).into_response()
 }
 
 async fn list_devices(headers: HeaderMap, Path(_network_id): Path<u64>) -> Response {
@@ -451,7 +451,7 @@ async fn delete_forward(
     if forward_id != 4001 {
         return error_response(404, "error.forward.not_found");
     }
-    Json(wrap(json!({}))).into_response()
+    Json(wrap(Value::Null)).into_response()
 }
 
 async fn list_reservations(headers: HeaderMap, Path(_network_id): Path<u64>) -> Response {
@@ -493,7 +493,7 @@ async fn delete_reservation(
     if !(5001..=5002).contains(&reservation_id) {
         return error_response(404, "error.reservation.not_found");
     }
-    Json(wrap(json!({}))).into_response()
+    Json(wrap(Value::Null)).into_response()
 }
 
 async fn get_activity(headers: HeaderMap, Path(_network_id): Path<u64>) -> Response {
