@@ -33,6 +33,11 @@ make test-live EERO_IP=<gateway>                 # read-only tests against a rea
 
 ## Rules
 
+- **You have no eero session, and you don't need one.** Everything here is built and tested
+  against the mock server. Only the operator can reach a real network, so anything that needs one
+  (live tests, checking a new endpoint's shape) is a request to the operator: say exactly which
+  read-only commands to run. Never ask for the token.
+
 - **Never log, print or commit a token.** The session cookie is a live credential for someone's
   home network. Header values that carry it are marked sensitive; keep it that way, and keep raw
   auth request and response bodies out of logs. Tests assert this.
