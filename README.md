@@ -4,7 +4,7 @@
 > fixes and features for running eeroctl from automation: the session token stays out of logs,
 > output and world-readable files; device updates take effect; DHCP reservations; a `--yes` guard
 > on destructive commands; and release binaries. See [docs/plan.md](docs/plan.md) for what and
-> why. Issues and pull requests go to [heka-vault/eero](https://github.com/heka-vault/eero/issues).
+> why. Issues and pull requests go to [detroitpro/eero](https://github.com/detroitpro/eero/issues).
 
 A command-line tool for managing [eero](https://eero.com) WiFi mesh routers. Built on the unofficial eero API, eeroctl gives you full control over your network from the terminal: view connected devices, manage profiles, configure port forwards, run speed tests, and more.
 
@@ -55,19 +55,19 @@ If you have a different eero model and would like to help verify compatibility:
 
 1. Install eeroctl and authenticate (see below)
 2. Run through the basic commands (`account get`, `network get`, `eero list`, `device list`)
-3. Report any issues or unexpected output at [github.com/heka-vault/eero/issues](https://github.com/heka-vault/eero/issues). Redact network IDs, MAC addresses, IPs and tokens first.
+3. Report any issues or unexpected output at [github.com/detroitpro/eero/issues](https://github.com/detroitpro/eero/issues). Redact network IDs, MAC addresses, IPs and tokens first.
 
 The test suite includes unit tests, integration tests with a mock API server, and optional live tests that run against a real eero device. See [Running Tests](#running-tests) for details.
 
 ## Installation
 
 Linux x86_64 binaries (glibc 2.35+, OpenSSL 3, so Ubuntu 22.04 or newer) are attached to each
-[release](https://github.com/heka-vault/eero/releases) with a `.sha256`:
+[release](https://github.com/detroitpro/eero/releases) with a `.sha256`:
 
 ```bash
 v=v0.2.2
-curl -fsSLO "https://github.com/heka-vault/eero/releases/download/$v/eeroctl-$v-x86_64-linux-gnu.tar.gz"
-curl -fsSL "https://github.com/heka-vault/eero/releases/download/$v/eeroctl-$v-x86_64-linux-gnu.tar.gz.sha256" | sha256sum -c
+curl -fsSLO "https://github.com/detroitpro/eero/releases/download/$v/eeroctl-$v-x86_64-linux-gnu.tar.gz"
+curl -fsSL "https://github.com/detroitpro/eero/releases/download/$v/eeroctl-$v-x86_64-linux-gnu.tar.gz.sha256" | sha256sum -c
 tar xzf "eeroctl-$v-x86_64-linux-gnu.tar.gz" && install -m 755 "eeroctl-$v-x86_64-linux-gnu/eeroctl" ~/.local/bin/
 ```
 
