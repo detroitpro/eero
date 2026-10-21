@@ -127,7 +127,7 @@ impl EeroClient {
     pub async fn logout(&self) -> Result<()> {
         let url = self.url("/logout");
         // Best-effort POST to logout endpoint
-        let _ = self.post_empty::<serde_json::Value>(&url).await;
+        let _ = self.post_empty(&url).await;
 
         self.credentials().delete_session_token().await?;
         self.credentials().delete_user_token().await?;

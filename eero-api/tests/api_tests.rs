@@ -308,8 +308,11 @@ async fn test_reboot_eero() {
     let server = MockServer::start().await;
     let client = server.client_with_session(SESSION);
 
-    let result = client.reboot_eero("/2.2/eeros/1001").await;
-    assert!(result.is_ok());
+    let result = client.reboot_eero("/2.2/eeros/1001").await.unwrap();
+    assert!(
+        result.is_null(),
+        "a reboot with no data in the reply is a success"
+    );
 
     server.shutdown();
 }
@@ -518,10 +521,12 @@ async fn test_delete_port_forward() {
     let server = MockServer::start().await;
     let client = server.client_with_session(SESSION);
 
-    client
+    // Like the live API, a successful delete replies with "data": null.
+    let deleted = client
         .delete_port_forward("/2.2/networks/12345/forwards/4001")
         .await
         .unwrap();
+    assert!(deleted.is_null());
     let old_style = client.delete_port_forward("/2.2/forwards/4001").await;
     assert!(old_style.is_err(), "forwards live under their network");
 
@@ -568,10 +573,11 @@ async fn test_delete_reservation() {
     let server = MockServer::start().await;
     let client = server.client_with_session(SESSION);
 
-    client
+    let deleted = client
         .delete_reservation("/2.2/networks/12345/reservations/5001")
         .await
         .unwrap();
+    assert!(deleted.is_null());
     let missing = client
         .delete_reservation("/2.2/networks/12345/reservations/9999")
         .await;

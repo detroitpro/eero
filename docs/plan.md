@@ -71,7 +71,10 @@ never deletes something the inventory doesn't mention unless asked.
 | [#7](https://github.com/heka-vault/eero/issues/7) | DHCP reservations | Done in v0.2.0 (#15); writes need a live check |
 | [#8](https://github.com/heka-vault/eero/issues/8) | `--version`; `--yes` for destructive commands | Done in v0.2.0 (#16) |
 | [#9](https://github.com/heka-vault/eero/issues/9) | Release binaries for Linux x86_64 | Done in v0.2.0 |
-| [#19](https://github.com/heka-vault/eero/issues/19) | Port forwards didn't match the live API | Done in v0.2.1 (#20); reads verified live |
+| [#19](https://github.com/heka-vault/eero/issues/19) | Port forwards didn't match the live API | Done in v0.2.1 (#20); list and delete verified live |
+| [#23](https://github.com/heka-vault/eero/issues/23) | Deletes reported an error when they succeeded | Done in v0.2.2 |
+
+Live-verified writes so far: `reservation create`, `forward delete` (it worked, but exited 1 before #23).
 
 ### Operator integration (outside this repository)
 

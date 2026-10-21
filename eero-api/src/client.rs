@@ -281,10 +281,12 @@ impl EeroClient {
         Self::unwrap_response(self.send(Method::POST, url, body).await?)
     }
 
-    /// Perform an authenticated POST request without a body.
+    /// Perform an authenticated POST request without a body (reboots, logout).
+    /// Success may carry no data; that comes back as `Value::Null`.
     #[tracing::instrument(skip(self))]
-    pub(crate) async fn post_empty<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
-        Self::unwrap_response(self.send(Method::POST, url, None).await?)
+    pub(crate) async fn post_empty(&self, url: &str) -> Result<serde_json::Value> {
+        let resp = self.send(Method::POST, url, None).await?;
+        Ok(resp.data.unwrap_or(serde_json::Value::Null))
     }
 
     /// Perform an authenticated PUT request with a JSON body.
@@ -298,10 +300,12 @@ impl EeroClient {
         Self::unwrap_response(self.send(Method::PUT, url, body).await?)
     }
 
-    /// Perform an authenticated DELETE request.
+    /// Perform an authenticated DELETE request. The API answers a successful
+    /// delete with `"data": null`, which comes back as `Value::Null`.
     #[tracing::instrument(skip(self))]
-    pub(crate) async fn delete<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
-        Self::unwrap_response(self.send(Method::DELETE, url, None).await?)
+    pub(crate) async fn delete(&self, url: &str) -> Result<serde_json::Value> {
+        let resp = self.send(Method::DELETE, url, None).await?;
+        Ok(resp.data.unwrap_or(serde_json::Value::Null))
     }
 
     /// Access the raw reqwest HTTP client (for advanced use cases).
