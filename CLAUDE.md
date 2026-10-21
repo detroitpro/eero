@@ -58,6 +58,6 @@ make test-live EERO_IP=<gateway>                 # read-only tests against a rea
 
 ## Workflow
 
-Work happens in GitHub issues and pull requests on `heka-vault/eero`. One issue per bug or
+Work happens in GitHub issues and pull requests on `detroitpro/eero`. One issue per bug or
 feature; the PR closes it. CI (`.github/workflows/ci.yml`) must be green before merge. Releases are
 tags `vX.Y.Z`; the release workflow attaches Linux binaries with checksums.
